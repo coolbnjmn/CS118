@@ -111,6 +111,8 @@ void dostuff (int sock)
    if(!validate_request(req))
    {
 	printf("Success");
+   	n = write(sock,"I got your message",18);
+   	if (n < 0) error("ERROR writing to socket");
    }
    else 
    {
@@ -118,9 +120,6 @@ void dostuff (int sock)
 	printf("%s", response);
 	n = write(sock, response, strlen(response));
    }
-
-   n = write(sock,"I got your message",18);
-   if (n < 0) error("ERROR writing to socket");
 }
 
 /*
@@ -159,6 +158,17 @@ char* send_400_response()
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	char* response;
 	response = malloc(256);
-	sprintf(response, "HTTP/1.1 400 Bad Request\nDate: %s\nServer: Ajan and Benjamin's Server/1.0\nConnection: close\nTransfer-Encoding: chunked", buf);
+	sprintf(response, "HTTP/1.1 400 Bad Request\nDate: %s\nServer: Ajan and Benjamin's Server/1.0\nTransfer-Encoding: chunked\nContent-Length: 0", buf);
+	return response;	
+}
+char* send_200_response()
+{
+	char buf[30];
+	time_t now = time(0);
+	struct tm tm = *gmtime(&now);
+	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	char* response;
+	response = malloc(256);
+	sprintf(response, "HTTP/1.1 400 Bad Request\nDate: %s\nServer: Ajan and Benjamin's Server/1.0\nTransfer-Encoding: chunked\nContent-Length: 0", buf);
 	return response;	
 }
