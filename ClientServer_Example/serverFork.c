@@ -11,13 +11,15 @@
 #include <strings.h>
 #include <sys/wait.h>	/* for the waitpid() system call */
 #include <signal.h>	/* signal name macros, and the kill() prototype */
-
+#include "string.h"
+#include "time.h"
 
 void sigchld_handler(int s)
 {
     while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
+char* send_400_response();
 void dostuff(int); /* function prototype */
 void error(char *msg)
 {
@@ -93,11 +95,80 @@ void dostuff (int sock)
 {
    int n;
    char buffer[256];
-      
+   char buffer2[256];
+   char *req;
+  
    bzero(buffer,256);
    n = read(sock,buffer,255);
+
    if (n < 0) error("ERROR reading from socket");
-   printf("Here is the message:\n %s\n",buffer);
-   n = write(sock,"I got your message",18);
-   if (n < 0) error("ERROR writing to socket");
+   printf("Here is the message: %s\n",buffer);
+
+   strcpy(buffer2, buffer);
+   req = strtok(buffer2, "\n");
+   // printf("%s\n", req); // Test
+
+   if(!validate_request(req))
+   {
+	printf("Success");
+   	n = write(sock,"I got your message",18);
+   	if (n < 0) error("ERROR writing to socket");
+   }
+   else 
+   {
+	char* response = send_400_response();
+	printf("%s", response);
+	n = write(sock, response, strlen(response));
+   }
+}
+
+/*
+* Should be bool for c++
+*/
+int validate_request(char * request)
+{
+	int i = 0;
+	char* token;
+
+	token = strtok(request, " ");
+	printf("%s\n", token);
+	if(strcmp(token, "GET"))
+	{
+		return 0;		
+	}
+
+	token = strtok(NULL, " ");
+        printf("%s\n", token);
+
+	token = strtok(NULL, " ");
+	printf("%s\n", token);
+	if(strncmp(token, "HTTP/1.1", 8) && strncmp(token, "HTTP/1.0", 8) )
+	{
+		return 0;
+	}
+	
+	return 1;
+}
+
+char* send_400_response()
+{
+	char buf[30];
+	time_t now = time(0);
+	struct tm tm = *gmtime(&now);
+	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	char* response;
+	response = malloc(256);
+	sprintf(response, "HTTP/1.1 400 Bad Request\nDate: %s\nServer: Ajan and Benjamin's Server/1.0\nTransfer-Encoding: chunked\nContent-Length: 0", buf);
+	return response;	
+}
+char* send_200_response()
+{
+	char buf[30];
+	time_t now = time(0);
+	struct tm tm = *gmtime(&now);
+	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	char* response;
+	response = malloc(256);
+	sprintf(response, "HTTP/1.1 400 Bad Request\nDate: %s\nServer: Ajan and Benjamin's Server/1.0\nTransfer-Encoding: chunked\nContent-Length: 0", buf);
+	return response;	
 }
