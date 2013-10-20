@@ -20,6 +20,7 @@ void sigchld_handler(int s)
 }
 
 char* send_400_response();
+char* send_200_response();
 void dostuff(int); /* function prototype */
 void error(char *msg)
 {
@@ -110,8 +111,10 @@ void dostuff (int sock)
 
    if(!validate_request(req))
    {
-	printf("Success");
-   	n = write(sock,"I got your message",18);
+	printf("Success\n");
+	char* response = send_200_response();
+   	n = write(sock, response, strlen(response));
+	printf("%s", response);
    	if (n < 0) error("ERROR writing to socket");
    }
    else 
@@ -158,7 +161,18 @@ char* send_400_response()
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	char* response;
 	response = malloc(256);
-	sprintf(response, "HTTP/1.1 400 Bad Request\nDate: %s\nServer: Ajan and Benjamin's Server/1.0\nTransfer-Encoding: chunked\nContent-Length: 0", buf);
+	FILE *fp;
+	fp = fopen("400response.html", "r");
+	fseek(fp, 0L, SEEK_END);
+	int f_size = ftell(fp);
+	rewind(fp);
+	char *str;
+	str = malloc(f_size+1);
+	size_t read_size = fread(str,1,f_size,fp);
+	str[read_size] = 0;
+	fclose(fp);
+	printf("%s\n", str);
+	sprintf(response, "HTTP/1.1 400 Bad Request\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
 	return response;	
 }
 char* send_200_response()
@@ -169,6 +183,6 @@ char* send_200_response()
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	char* response;
 	response = malloc(256);
-	sprintf(response, "HTTP/1.1 400 Bad Request\nDate: %s\nServer: Ajan and Benjamin's Server/1.0\nTransfer-Encoding: chunked\nContent-Length: 0", buf);
+	sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: 10\r\n\r\nabcdefghid\r\n", buf);
 	return response;	
 }
