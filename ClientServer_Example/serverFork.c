@@ -185,11 +185,10 @@ char* send_400_response()
 // the other send function should maybe return nothing and follow this behavior
 char* send_image_response(int sock, char* request)
 {
-	unsigned char* response;
+	char* response;
 	char* token;
 	printf("inside image response\n");
-	response = malloc(1024);
-	printf("Request: %s\n", request);
+	response = malloc(256);
 	
 
 	token = strtok(request, " ");
@@ -209,7 +208,7 @@ char* send_image_response(int sock, char* request)
 	  str = malloc(f_size+1);
       	  size_t read_size = fread(str,1,f_size,fp);
 	  printf("Read size: %d\n", read_size);
-	  str[read_size] = 0;
+//	  str[read_size] = 0;
 	  fclose(fp);
 	  char buf[30];
 	  time_t now = time(0);
@@ -225,9 +224,11 @@ char* send_image_response(int sock, char* request)
 	        bytes_to_write = f_size;
 	  }
 	  while (count_written < f_size) {
+		printf("Count-written before: %ld\n", count_written);
 	  	n = write(sock, str+count_written, bytes_to_write); 
 	  	printf("Second bytes written: %d\n", n);
-		count_written += 65536;
+		count_written += n;
+		printf("Count-written after: %ld\n", count_written);
 		if(f_size-count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
 	  }	
