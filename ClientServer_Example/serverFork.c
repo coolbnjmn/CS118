@@ -19,6 +19,7 @@ void sigchld_handler(int s)
     while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
+char* send_404_response();
 char* send_400_response();
 char* send_200_response();
 void dostuff(int); /* function prototype */
@@ -107,12 +108,14 @@ void dostuff (int sock)
 
    strcpy(buffer2, buffer);
    req = strtok(buffer2, "\n");
-   // printf("%s\n", req); // Test
+   
+   char *reqCopy = malloc(strlen(req));
+   strcpy(reqCopy, req);
 
-   if(!validate_request(req))
+   if(validate_request(req))
    {
 	printf("Success\n");
-	char* response = send_200_response();
+	char* response = send_200_response(reqCopy);
    	n = write(sock, response, strlen(response));
 	printf("%s", response);
    	if (n < 0) error("ERROR writing to socket");
@@ -175,15 +178,37 @@ char* send_400_response()
 	sprintf(response, "HTTP/1.1 400 Bad Request\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
 	return response;	
 }
-char* send_200_response()
+char* send_200_response(char* request)
 {
-	char buf[30];
-	time_t now = time(0);
-	struct tm tm = *gmtime(&now);
-	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	printf("inside 200 response\n");
+	printf("request: %s\n", request);
 	char* response;
+	char* token;
 	response = malloc(256);
-	sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: 10\r\n\r\nabcdefghid\r\n", buf);
+
+	token = strtok(request, " ");
+	token = strtok(NULL, " ");
+        printf("%s\n", token);
+	FILE *fp;
+	fp = fopen(token+1, "r");
+	if(!fp) {
+//	  response = send_404_response();
+	} else {
+	  fseek(fp, 0L, SEEK_END);
+	  int f_size = ftell(fp);
+	  rewind(fp);
+	  char *str;
+	  str = malloc(f_size+1);
+      	  size_t read_size = fread(str,1,f_size,fp);
+	  str[read_size] = 0;
+	  fclose(fp);
+	  printf("%s\n", str);
+	  char buf[30];
+	  time_t now = time(0);
+	  struct tm tm = *gmtime(&now);
+	  strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	  sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
+	}
 	return response;	
 }
 
