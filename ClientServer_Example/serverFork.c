@@ -22,6 +22,7 @@ void sigchld_handler(int s)
 char* send_404_response();
 char* send_400_response();
 char* send_200_response();
+unsigned char* send_image_response();
 void dostuff(int); /* function prototype */
 void error(char *msg)
 {
@@ -115,9 +116,10 @@ void dostuff (int sock)
    if(validate_request(req))
    {
 	printf("Success\n");
-	char* response = send_200_response(reqCopy);
+//	char* response = send_200_response(reqCopy);
+	printf("reqCopy: %s", reqCopy);
+	unsigned char* response = send_image_response(sock, reqCopy);
    	n = write(sock, response, strlen(response));
-	printf("%s", response);
    	if (n < 0) error("ERROR writing to socket");
    }
    else 
@@ -178,6 +180,59 @@ char* send_400_response()
 	sprintf(response, "HTTP/1.1 400 Bad Request\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
 	return response;	
 }
+
+unsigned char* send_image_response(int sock, char* request)
+{
+	unsigned char* response;
+	char* token;
+	printf("inside image response\n");
+	response = malloc(1024);
+	printf("Request: %s\n", request);
+	
+
+	token = strtok(request, " ");
+	token = strtok(NULL, " ");
+	FILE *fp;
+	printf("%s\n", token+1);
+	fp = fopen(token+1, "rb");
+	printf("fopen succeeded\n");
+	if(fp == NULL)
+	  response = send_404_response();
+	else {
+	  fseek(fp, 0L, SEEK_END);
+	  long f_size = ftell(fp);
+	  printf("f_size: %ld\n", f_size);
+	  rewind(fp);
+	  unsigned char *str;
+	  str = malloc(f_size+1);
+      	  size_t read_size = fread(str,1,f_size,fp);
+	  printf("Read size: %d\n", read_size);
+	  str[read_size] = 0;
+	  printf("%s\n", str);
+	  fclose(fp);
+	  char buf[30];
+	  time_t now = time(0);
+	  struct tm tm = *gmtime(&now);
+	  strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	  sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: image/jpeg\r\nContent-Length: %ld\r\n\r\n", buf,f_size);
+	  int n = write(sock, response, strlen(response));
+	  printf("Bytes written: %d\n", n);
+	  long count_written = 0;
+	  int bytes_to_write = 65365;
+	  if (f_size < bytes_to_write) {
+	        bytes_to_write = f_size;
+	  }
+	  while (count_written < f_size) {
+	  	n = write(sock, str+count_written, bytes_to_write); 
+	  	printf("Second bytes written: %d\n", n);
+		count_written += 65365;
+		if(f_size-count_written < bytes_to_write)
+			bytes_to_write = f_size - count_written;
+	  }	
+	  response = "";
+	}
+	return response;	   
+}
 char* send_200_response(char* request)
 {
 	printf("inside 200 response\n");
@@ -192,9 +247,7 @@ char* send_200_response(char* request)
 	FILE *fp;
 	fp = fopen(token+1, "r");
 	if(fp == NULL) {
-          printf("Line1\n");
 	  response = send_404_response();
-	  printf("Line3\n");
 	} else {
 	  fseek(fp, 0L, SEEK_END);
 	  int f_size = ftell(fp);
@@ -202,6 +255,7 @@ char* send_200_response(char* request)
 	  char *str;
 	  str = malloc(f_size+1);
       	  size_t read_size = fread(str,1,f_size,fp);
+	  printf("Read size: %d\n", read_size);
 	  str[read_size] = 0;
 	  fclose(fp);
 	  printf("%s\n", str);
