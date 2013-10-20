@@ -22,7 +22,7 @@ void sigchld_handler(int s)
 char* send_404_response();
 char* send_400_response();
 char* send_200_response();
-unsigned char* send_image_response();
+char* send_image_response();
 void dostuff(int); /* function prototype */
 void error(char *msg)
 {
@@ -118,7 +118,7 @@ void dostuff (int sock)
 	printf("Success\n");
 //	char* response = send_200_response(reqCopy);
 	printf("reqCopy: %s", reqCopy);
-	unsigned char* response = send_image_response(sock, reqCopy);
+	char* response = send_image_response(sock, reqCopy);
    	n = write(sock, response, strlen(response));
    	if (n < 0) error("ERROR writing to socket");
    }
@@ -181,7 +181,9 @@ char* send_400_response()
 	return response;	
 }
 
-unsigned char* send_image_response(int sock, char* request)
+// this function actually sends the data, as it's name suggests
+// the other send function should maybe return nothing and follow this behavior
+char* send_image_response(int sock, char* request)
 {
 	unsigned char* response;
 	char* token;
@@ -208,7 +210,6 @@ unsigned char* send_image_response(int sock, char* request)
       	  size_t read_size = fread(str,1,f_size,fp);
 	  printf("Read size: %d\n", read_size);
 	  str[read_size] = 0;
-	  printf("%s\n", str);
 	  fclose(fp);
 	  char buf[30];
 	  time_t now = time(0);
@@ -218,14 +219,15 @@ unsigned char* send_image_response(int sock, char* request)
 	  int n = write(sock, response, strlen(response));
 	  printf("Bytes written: %d\n", n);
 	  long count_written = 0;
-	  int bytes_to_write = 65365;
+	  // try to write 64kb at a time
+	  int bytes_to_write = 65536;
 	  if (f_size < bytes_to_write) {
 	        bytes_to_write = f_size;
 	  }
 	  while (count_written < f_size) {
 	  	n = write(sock, str+count_written, bytes_to_write); 
 	  	printf("Second bytes written: %d\n", n);
-		count_written += 65365;
+		count_written += 65536;
 		if(f_size-count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
 	  }	
