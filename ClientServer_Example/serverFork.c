@@ -216,15 +216,13 @@ char* send_200_response(char* request)
 
 char* send_404_response()
 {
-	printf("ASFDSS");
 	char buf[30];
         time_t now = time(0);
         struct tm tm = *gmtime(&now);
         strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
         char* response;
-        response = malloc(256);
+        response = malloc(1024);
 	FILE *fp;
-	printf("SASD");
         fp = fopen("404.html", "r");
         fseek(fp, 0L, SEEK_END);
         int f_size = ftell(fp);
@@ -234,7 +232,7 @@ char* send_404_response()
         size_t read_size = fread(str,1,f_size,fp);
         str[read_size] = 0;
         fclose(fp);
-        sprintf("HTTP/1.1 404 Not Found\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
+        sprintf(response, "HTTP/1.1 404 Not Found\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size, str);
 	printf("%s", response);
         return response;
 }
