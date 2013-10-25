@@ -130,7 +130,7 @@ void dostuff (int sock)
  ********************************************************/
 void
 analyze_request(int   sock, 
-				char* request)
+		char* request)
 {
    	char* reqCopy = malloc(strlen(request));
    	strcpy(reqCopy, request);
@@ -189,7 +189,7 @@ validate_request(char *request)
  ********************************************************/
 void
 send_valid_response(int   sock,
-			  		char* request)
+      		    char* request)
 {
 	int n;
 	
@@ -206,7 +206,7 @@ send_valid_response(int   sock,
 	file_name = strtok(NULL, " ");
 	fp = fopen(file_name+1, "rb");
 	if(fp == NULL){
-		send_invalid_response(sock);
+		send_404_response(sock);
 	}
 	else {
 		c = '.';
@@ -263,7 +263,6 @@ send_invalid_response(int sock)
 	read_size = fread(str,1,f_size,fp);
 	str[read_size] = 0;
 	fclose(fp);
-	printf("%s\n", str);
 	sprintf(response, "HTTP/1.1 400 Bad Request\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
 	write(sock, response, strlen(response));
 }
@@ -277,7 +276,7 @@ send_invalid_response(int sock)
  ********************************************************/
 void 
 send_image_response(FILE *fp, 
-					int   sock)
+		    int   sock)
 {
 	char* response;
 	long f_size;
@@ -287,19 +286,17 @@ send_image_response(FILE *fp,
 	size_t n;
 	long count_written;
 	size_t  bytes_to_write;
-	printf("inside image response\n");
 
 	count_written = 0;
+	// try to write 64kb at a time
 	bytes_to_write = 65536;
 
 	response = malloc(256);			
 	fseek(fp, 0L, SEEK_END);
 	f_size = ftell(fp);
-	printf("f_size: %ld\n", f_size);
 	rewind(fp);
 	str = malloc(f_size+1);
 	read_size = fread(str,1,f_size,fp);
-	printf("Read size: %d\n", read_size);
 	str[read_size] = 0;
 	fclose(fp);
 	time_t now = time(0);
@@ -307,23 +304,19 @@ send_image_response(FILE *fp,
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: image/jpeg\r\nContent-Length: %ld\r\n\r\n", buf,f_size);
 	n = write(sock, response, strlen(response));
-	printf("Bytes written: %d\n", n);
-	// try to write 64kb at a time
 	if (f_size < bytes_to_write) {
 	        bytes_to_write = f_size;
 	  }
 
 	int count = 0;
 	while (count_written <= f_size) {
-		printf("Count-written before: %ld\n", count_written);
 	  	n = write(sock, str+count_written, bytes_to_write); 
-	  	printf("Second bytes written: %d\n", n);
 		count_written += bytes_to_write;
-		printf("Count-written after: %ld fsize:%ld\n", count_written, f_size);
 		if(f_size - count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
+
 		if(bytes_to_write == 0) count++;
-		if (count > 1024) break;
+		if (count > 1000000) break;
 	  }		   
 }
 
@@ -335,7 +328,7 @@ send_image_response(FILE *fp,
  html described by the file descriptor. 
  ********************************************************/
 void send_html_response(FILE* fp, 
-						int   sock)
+			int   sock)
 {
 	char* response;
 	char *str;
@@ -348,6 +341,7 @@ void send_html_response(FILE* fp,
 
 	response = malloc(256);
 	count_written = 0;
+	  // try to write 64kb at a time
 	bytes_to_write = 65536;
 
 	fseek(fp, 0L, SEEK_END);
@@ -356,7 +350,6 @@ void send_html_response(FILE* fp,
 
 	str = malloc(f_size+1);
 	read_size = fread(str,1,f_size,fp);
-	printf("Read size: %d\n", read_size);
 	str[read_size] = 0;
 	fclose(fp);
 
@@ -365,24 +358,19 @@ void send_html_response(FILE* fp,
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n", buf,f_size);
 	n = write(sock, response, strlen(response));
-	printf("Bytes written: %d\n", n);
-	  // try to write 64kb at a time
 	if (f_size < bytes_to_write) {
 	        bytes_to_write = f_size;
 	}
 
 	int count = 0;
 	while (count_written <= f_size) {
-		printf("Count-written before: %ld\n", count_written);
 	  	n = write(sock, str+count_written, bytes_to_write); 
-	  	printf("Second bytes written: %d\n", n);
 		count_written += n;
-		printf("Count-written after: %ld\n", count_written);
 		if(f_size-count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
 
 		if(bytes_to_write == 0) count++;
-		if(count > 1024) break;
+		if(count > 1000000) break;
 	}	
 }
 
@@ -411,6 +399,5 @@ void send_404_response(int sock)
         str[read_size] = 0;
         fclose(fp);
         sprintf(response, "HTTP/1.1 404 Not Found\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size, str);
-	printf("%s", response);
         write(sock, response, strlen(response));
 }
