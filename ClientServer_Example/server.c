@@ -310,17 +310,14 @@ send_image_response(FILE *fp,
 	  }
 
 	int count = 0;
-	while (count_written < f_size) {
+	while (count_written <= f_size) {
 	  	n = write(sock, str+count_written, bytes_to_write); 
 		count_written += n;
-		if(count < 5) {
-		printf("bytes_to_write: %ld  count_written: %ld  n: %ld f_size:%ld\n", bytes_to_write, count_written, n, f_size);
-		}
 		if(f_size - count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
 
-		//if(bytes_to_write == 0) count++;
-		//if (count > 5) break;
+		if(bytes_to_write == 0) count++;
+		if (count > 1000000) break;
 	  }		   
 }
 
