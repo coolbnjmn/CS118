@@ -116,8 +116,7 @@ void dostuff (int sock)
    if(validate_request(req))
    {
 	printf("Success\n");
-//	char* response = send_200_response(reqCopy);
-	printf("reqCopy: %s", reqCopy);
+//	char* response = send_200_response(sock, reqCopy);
 	char* response = send_image_response(sock, reqCopy);
    	n = write(sock, response, strlen(response));
    	if (n < 0) error("ERROR writing to socket");
@@ -208,18 +207,18 @@ char* send_image_response(int sock, char* request)
 	  str = malloc(f_size+1);
       	  size_t read_size = fread(str,1,f_size,fp);
 	  printf("Read size: %d\n", read_size);
-//	  str[read_size] = 0;
+	  str[read_size] = 0;
 	  fclose(fp);
 	  char buf[30];
 	  time_t now = time(0);
 	  struct tm tm = *gmtime(&now);
 	  strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	  sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: image/jpeg\r\nContent-Length: %ld\r\n\r\n", buf,f_size);
-	  int n = write(sock, response, strlen(response));
+	  size_t n = write(sock, response, strlen(response));
 	  printf("Bytes written: %d\n", n);
 	  long count_written = 0;
 	  // try to write 64kb at a time
-	  int bytes_to_write = 65536;
+	  size_t  bytes_to_write = 65536;
 	  if (f_size < bytes_to_write) {
 	        bytes_to_write = f_size;
 	  }
@@ -236,7 +235,7 @@ char* send_image_response(int sock, char* request)
 	}
 	return response;	   
 }
-char* send_200_response(char* request)
+char* send_200_response(int sock, char* request)
 {
 	printf("inside 200 response\n");
 	printf("request: %s\n", request);
@@ -261,12 +260,29 @@ char* send_200_response(char* request)
 	  printf("Read size: %d\n", read_size);
 	  str[read_size] = 0;
 	  fclose(fp);
-	  printf("%s\n", str);
 	  char buf[30];
 	  time_t now = time(0);
 	  struct tm tm = *gmtime(&now);
 	  strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
-	  sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
+	  sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n", buf,f_size);
+	  size_t n = write(sock, response, strlen(response));
+	  printf("Bytes written: %d\n", n);
+	  long count_written = 0;
+	  // try to write 64kb at a time
+	  size_t  bytes_to_write = 65536;
+	  if (f_size < bytes_to_write) {
+	        bytes_to_write = f_size;
+	  }
+	  while (count_written < f_size) {
+		printf("Count-written before: %ld\n", count_written);
+	  	n = write(sock, str+count_written, bytes_to_write); 
+	  	printf("Second bytes written: %d\n", n);
+		count_written += n;
+		printf("Count-written after: %ld\n", count_written);
+		if(f_size-count_written < bytes_to_write)
+			bytes_to_write = f_size - count_written;
+	  }	
+	  response = "";
 	}
 	return response;	
 }
