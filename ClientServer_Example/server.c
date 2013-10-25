@@ -280,12 +280,12 @@ send_image_response(FILE *fp,
 {
 	char* response;
 	long f_size;
-	unsigned char *str;
+	char *str;
 	size_t read_size;
 	char buf[30];
-	size_t n;
+	long n;
 	long count_written;
-	size_t  bytes_to_write;
+	long bytes_to_write;
 
 	count_written = 0;
 	// try to write 64kb at a time
@@ -302,21 +302,25 @@ send_image_response(FILE *fp,
 	time_t now = time(0);
 	struct tm tm = *gmtime(&now);
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
-	sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: image/jpeg\r\nContent-Length: %ld\r\n\r\n", buf,f_size);
+	sprintf(response, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: image/jpeg\r\nContent-Length: %ld\r\nConnection: keep-alive\r\n\r\n", buf,f_size);
 	n = write(sock, response, strlen(response));
+	printf("%s\n", response);
 	if (f_size < bytes_to_write) {
 	        bytes_to_write = f_size;
 	  }
 
 	int count = 0;
-	while (count_written <= f_size) {
+	while (count_written < f_size) {
 	  	n = write(sock, str+count_written, bytes_to_write); 
 		count_written += n;
+		if(count < 5) {
+		printf("bytes_to_write: %ld  count_written: %ld  n: %ld f_size:%ld\n", bytes_to_write, count_written, n, f_size);
+		}
 		if(f_size - count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
 
-		if(bytes_to_write == 0) count++;
-		if (count > 1000000) break;
+		//if(bytes_to_write == 0) count++;
+		//if (count > 5) break;
 	  }		   
 }
 
