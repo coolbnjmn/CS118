@@ -23,7 +23,13 @@ char* send_404_response();
 char* send_400_response();
 char* send_200_response();
 char* send_image_response();
-void dostuff(int); /* function prototype */
+
+void dostuff(int);
+void analyze_request(int, char*);
+void send_valid_response(int, char*);
+void send_invalid_response(int, char*);
+
+/* function prototype */
 void error(char *msg)
 {
     perror(msg);
@@ -96,43 +102,56 @@ int main(int argc, char *argv[])
  *****************************************/
 void dostuff (int sock)
 {
-   int n;
-   char buffer[256];
-   char buffer2[256];
-   char *req;
+   	int n;
+   	char buffer[256];
+   	char buffer2[256];
+   	char *req;
   
-   bzero(buffer,256);
-   n = read(sock,buffer,255);
+   	bzero(buffer,256);
+   	n = read(sock,buffer,255);
 
-   if (n < 0) error("ERROR reading from socket");
-   printf("Here is the message: %s\n",buffer);
+   	if (n < 0) error("ERROR reading from socket");
+   		printf("Here is the message: %s\n",buffer);
 
-   strcpy(buffer2, buffer);
-   req = strtok(buffer2, "\n");
-   
-   char *reqCopy = malloc(strlen(req));
-   strcpy(reqCopy, req);
+   	strcpy(buffer2, buffer);
+   	req = strtok(buffer2, "\n");
 
-   if(validate_request(req))
-   {
-	printf("Success\n");
-//	char* response = send_200_response(sock, reqCopy);
-	char* response = send_image_response(sock, reqCopy);
-   	n = write(sock, response, strlen(response));
-   	if (n < 0) error("ERROR writing to socket");
-   }
-   else 
-   {
+	analyze_request(sock, req);
+}
+
+void
+analyze_request(int   sock, 
+				char* request)
+{
+   	char* reqCopy = malloc(strlen(request));
+   	strcpy(reqCopy, request);
+   	if(validate_request(request))
+   	{
+		send_valid_response(sock, reqCopy);
+   	}
+   	else 
+   	{
+		send_invalid_response(sock, reqCopy);
+   	}
+}
+
+void
+send_invalid_response(int 	sock,
+			  		char* request)
+{
+	int n;
+
+	printf("Failure\n");
 	char* response = send_400_response();
 	printf("%s", response);
 	n = write(sock, response, strlen(response));
-   }
 }
 
 /*
 * Should be bool for c++
 */
-int validate_request(char * request)
+int 
+validate_request(char * request)
 {
 	int i = 0;
 	char* token;
@@ -155,6 +174,19 @@ int validate_request(char * request)
 	}
 	
 	return 1;
+}
+
+void
+send_valid_response(int   sock,
+			  		char* request)
+{
+	int n;
+	
+	printf("Success\n");
+	char* response = send_image_response(sock, request);
+   	n = write(sock, response, strlen(response));
+   	if (n < 0) 
+		error("ERROR writing to socket");
 }
 
 char* send_400_response()
@@ -187,8 +219,7 @@ char* send_image_response(int sock, char* request)
 	char* response;
 	char* token;
 	printf("inside image response\n");
-	response = malloc(256);
-	
+	response = malloc(256);			
 
 	token = strtok(request, " ");
 	token = strtok(NULL, " ");
