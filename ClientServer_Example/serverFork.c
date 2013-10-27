@@ -135,17 +135,6 @@ analyze_request(int   sock,
    	}
 }
 
-void
-send_invalid_response(int 	sock,
-			  		char* request)
-{
-	int n;
-
-	printf("Failure\n");
-	char* response = send_400_response();
-	printf("%s", response);
-	n = write(sock, response, strlen(response));
-}
 
 /*
 * Should be bool for c++
@@ -182,11 +171,39 @@ send_valid_response(int   sock,
 {
 	int n;
 	
-	printf("Success\n");
-	char* response = send_image_response(sock, request);
+	char* response;
+	char* fileName;
+	FILE *fp;
+
+	printf("inside image response\n");
+	response = malloc(256);			
+	fileName = strtok(request, " ");
+	fileName = strtok(NULL, " ");
+	printf("%s\n", fileName+1);
+	fp = fopen(fileName+1, "rb");
+	printf("fopen succeeded\n");
+	if(fp == NULL){
+	  	response = send_404_response();
+	}
+	else{
+		//response = send_image_response(fp, sock, request);
+		response = send_200_response(fp, sock, request);
+	}
    	n = write(sock, response, strlen(response));
    	if (n < 0) 
 		error("ERROR writing to socket");
+}
+
+void
+send_invalid_response(int 	sock,
+			  		char* request)
+{
+	int n;
+
+	printf("Failure\n");
+	char* response = send_400_response();
+	printf("%s", response);
+	n = write(sock, response, strlen(response));
 }
 
 char* send_400_response()
@@ -214,29 +231,22 @@ char* send_400_response()
 
 // this function actually sends the data, as it's name suggests
 // the other send function should maybe return nothing and follow this behavior
-char* send_image_response(int sock, char* request)
+char* send_image_response(FILE *fp, 
+						  int sock, 
+						  char* request)
 {
 	char* response;
-	char* token;
 	printf("inside image response\n");
-	response = malloc(256);			
 
-	token = strtok(request, " ");
-	token = strtok(NULL, " ");
-	FILE *fp;
-	printf("%s\n", token+1);
-	fp = fopen(token+1, "rb");
-	printf("fopen succeeded\n");
-	if(fp == NULL)
-	  response = send_404_response();
-	else {
+
+	response = malloc(256);			
 	  fseek(fp, 0L, SEEK_END);
 	  long f_size = ftell(fp);
 	  printf("f_size: %ld\n", f_size);
 	  rewind(fp);
 	  unsigned char *str;
 	  str = malloc(f_size+1);
-      	  size_t read_size = fread(str,1,f_size,fp);
+      size_t read_size = fread(str,1,f_size,fp);
 	  printf("Read size: %d\n", read_size);
 	  str[read_size] = 0;
 	  fclose(fp);
@@ -263,28 +273,21 @@ char* send_image_response(int sock, char* request)
 			bytes_to_write = f_size - count_written;
 	  }	
 	  response = "";
-	}
+	
 	return response;	   
 }
-char* send_200_response(int sock, char* request)
+char* send_200_response(FILE* fp, 
+						int   sock, 
+						char* request)
 {
 	printf("inside 200 response\n");
 	printf("request: %s\n", request);
 	char* response;
-	char* token;
 	response = malloc(256);
 
-	token = strtok(request, " ");
-	token = strtok(NULL, " ");
-        printf("%s\n", token);
-	FILE *fp;
-	fp = fopen(token+1, "r");
-	if(fp == NULL) {
-	  response = send_404_response();
-	} else {
-	  fseek(fp, 0L, SEEK_END);
-	  int f_size = ftell(fp);
-	  rewind(fp);
+	fseek(fp, 0L, SEEK_END);
+	int f_size = ftell(fp);
+	rewind(fp);
 	  char *str;
 	  str = malloc(f_size+1);
       	  size_t read_size = fread(str,1,f_size,fp);
@@ -314,7 +317,7 @@ char* send_200_response(int sock, char* request)
 			bytes_to_write = f_size - count_written;
 	  }	
 	  response = "";
-	}
+
 	return response;	
 }
 
