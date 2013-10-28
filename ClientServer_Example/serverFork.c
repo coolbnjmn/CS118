@@ -14,20 +14,19 @@
 #include "string.h"
 #include "time.h"
 
+void dostuff(int);
+void analyze_request(int, char*);
+int  validate_request(char *);
+void send_valid_response(int, char*);
+void send_invalid_response(int);
+void send_image_response(FILE *, int);
+void send_html_response(FILE*, int);
+void send_404_response(int);
+
 void sigchld_handler(int s)
 {
     while(waitpid(-1, NULL, WNOHANG) > 0);
 }
-
-void send_404_response();
-void send_400_response();
-void send_html_response();
-void send_image_response();
-
-void dostuff(int);
-void analyze_request(int, char*);
-void send_valid_response(int, char*);
-void send_invalid_response(int, char*);
 
 /* function prototype */
 void error(char *msg)
@@ -110,8 +109,9 @@ void dostuff (int sock)
    	bzero(buffer,256);
    	n = read(sock,buffer,255);
 
-   	if (n < 0) error("ERROR reading from socket");
-   		printf("Here is the message: %s\n",buffer);
+   	if (n < 0) 
+		error("ERROR reading from socket");
+   	printf("Here is the message: %s\n",buffer); // Answer for part A
 
    	strcpy(buffer2, buffer);
    	req = strtok(buffer2, "\n");
@@ -119,6 +119,15 @@ void dostuff (int sock)
 	analyze_request(sock, req);
 }
 
+/******** analyze_request() *****************************
+ function takes two arguements, sock and  request
+ sock is a socket descriptor describing the the port
+ with which we try to connect.
+ request is a string describing the http request received
+ from the client
+ analyze_request makes a copy of the request and checks if 
+ it is valid by calling two other functions.
+ ********************************************************/
 void
 analyze_request(int   sock, 
 				char* request)
@@ -131,40 +140,53 @@ analyze_request(int   sock,
    	}
    	else 
    	{
-		send_invalid_response(sock, reqCopy);
+		send_invalid_response(sock);
    	}
 }
 
-
-/*
-* Should be bool for c++
-*/
+/******** validate_request() *****************************
+ function takes two arguements, sock and  request
+ request is a string describing the http request received
+ from the client
+ validate_request splits the request into a set of tokens.
+ Each token corresponds to a header field and is checked
+ for validity.
+ 0 is returned if the request is invalid
+ 1 is returned if each header field is valid
+ ********************************************************/
 int 
-validate_request(char * request)
+validate_request(char *request)
 {
-	int i = 0;
 	char* token;
 
 	token = strtok(request, " ");
-	printf("%s\n", token);
 	if(strcmp(token, "GET"))
 	{
 		return 0;		
 	}
 
 	token = strtok(NULL, " ");
-        printf("%s\n", token);
-
 	token = strtok(NULL, " ");
-	printf("%s\n", token);
-	if(strncmp(token, "HTTP/1.1", 8) && strncmp(token, "HTTP/1.0", 8) )
-	{
+
+	if(strncmp(token, "HTTP/1.1", 8) && strncmp(token, "HTTP/1.0", 8)) {
 		return 0;
 	}
 	
 	return 1;
 }
 
+/******** send_valid_response() *****************************
+ function takes two arguements, sock and  request
+ sock is a socket descriptor describing the the port
+ request is a string describing the http request received
+ from the client
+ send_valid_response first checks if the file mentioned in 
+ the http request exists in the server directory. If it 
+ doesn't, a 404 response is sent. If it does, the file extension 
+ is parsed. If it is an acceptable format, either an image is to or a
+ page depending on the extension.
+ Otherwise a 404 response is sent.
+ ********************************************************/
 void
 send_valid_response(int   sock,
 			  		char* request)
@@ -179,17 +201,14 @@ send_valid_response(int   sock,
 	char* ext_loc;
 	int pos;
 
-	printf("inside image response\n");
 	response = malloc(256);			
 	file_name = strtok(request, " ");
 	file_name = strtok(NULL, " ");
-	printf("%s\n", file_name+1);
 	fp = fopen(file_name+1, "rb");
-	printf("fopen succeeded\n");
 	if(fp == NULL){
-	  	send_404_response(sock);
+		send_invalid_response(sock);
 	}
-	else{
+	else {
 		c = '.';
 		ext_loc = strchr(file_name, c);
 		pos = ext_loc - file_name;
@@ -199,55 +218,66 @@ send_valid_response(int   sock,
 		int i;		
 		for(i = 0; i < strlen(ext); i++)
 			ext[i] = tolower(ext[i]); 
-		printf("%s\n", ext);
 		if(strcmp(ext, "jpg") == 0 || strcmp(ext, "jpeg") == 0 || strcmp(ext, "gif") == 0 || strcmp(ext, "jpeg") == 0 || strcmp(ext, "jfif") == 0 || strcmp(ext, "png") == 0)
-			send_image_response(fp, sock, request);
+			send_image_response(fp, sock);
 		else if(strcmp(ext, "html") == 0 || strcmp(ext, "txt") == 0)
-			send_html_response(fp, sock, request);
+			send_html_response(fp, sock);
+		else
+			send_invalid_response(sock);
 	}
    	n = write(sock, response, strlen(response));
    	if (n < 0) 
 		error("ERROR writing to socket");
 }
 
+/******** send_invalid_response() *****************************
+ function takes two arguements, sock and  request
+ sock is a socket descriptor describing the the port
+ send_invalid_response sends a http 400 response and writes an 
+ html page 400response.html decribing the nature of the error to 
+ the client. It finds the current time, converts it into a RFC 
+ defined format and finds the length of the file. Both of these 
+ fields are input into a string which is written out. An html file 
+ is also written out.
+ ********************************************************/
 void
-send_invalid_response(int 	sock,
-			  		  char* request)
-{
-	int n;
-
-	printf("Failure\n");
-	send_400_response(sock);
-}
-
-void send_400_response(int sock)
+send_invalid_response(int sock)
 {
 	char buf[30];
+	char* response;
+	char *str;
+	int f_size;
+	size_t read_size;
+	FILE *fp;
+
+	response = malloc(256);
+
 	time_t now = time(0);
 	struct tm tm = *gmtime(&now);
 	strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm);
-	char* response;
-	response = malloc(256);
-	FILE *fp;
 	fp = fopen("400response.html", "r");
 	fseek(fp, 0L, SEEK_END);
-	int f_size = ftell(fp);
+	f_size = ftell(fp);
 	rewind(fp);
-	char *str;
 	str = malloc(f_size+1);
-	size_t read_size = fread(str,1,f_size,fp);
+	read_size = fread(str,1,f_size,fp);
 	str[read_size] = 0;
 	fclose(fp);
 	printf("%s\n", str);
 	sprintf(response, "HTTP/1.1 400 Bad Request\r\nDate: %s\r\nServer: Ajan and Benjamin's Server/1.0\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s\r\n", buf,f_size,str);
-	write(sock, response, strlen(response));	
+	write(sock, response, strlen(response));
 }
 
-// this function actually sends the data, as it's name suggests
-// the other send function should maybe return nothing and follow this behavior
-void send_image_response(FILE *fp, 
-						  int sock, 
-						  char* request)
+/******** send_image_response() *****************************
+ function takes two arguements, sock and  request
+ fp is a file descriptor to an opened image file
+ sock is a socket descriptor describing the the port
+ send_image_response sends a http 200 response and writes the 
+ image described by the file descriptor.
+ ********************************************************/
+void 
+send_image_response(FILE *fp, 
+					int   sock)
 {
 	char* response;
 	long f_size;
@@ -282,23 +312,31 @@ void send_image_response(FILE *fp,
 	if (f_size < bytes_to_write) {
 	        bytes_to_write = f_size;
 	  }
-	while (count_written < f_size) {
+
+	int count = 0;
+	while (count_written <= f_size) {
 		printf("Count-written before: %ld\n", count_written);
 	  	n = write(sock, str+count_written, bytes_to_write); 
 	  	printf("Second bytes written: %d\n", n);
-		count_written += n;
-		printf("Count-written after: %ld\n", count_written);
-		if(f_size-count_written < bytes_to_write)
+		count_written += bytes_to_write;
+		printf("Count-written after: %ld fsize:%ld\n", count_written, f_size);
+		if(f_size - count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
+		if(bytes_to_write == 0) count++;
+		if (count > 1024) break;
 	  }		   
 }
 
+/******** send_html_response() *****************************
+ function takes two arguements, sock and  request
+ fp is a file descriptor to an opened image file
+ sock is a socket descriptor describing the the port
+ send_html_response sends a http 200 response and writes the 
+ html described by the file descriptor. 
+ ********************************************************/
 void send_html_response(FILE* fp, 
-						int   sock, 
-						char* request)
+						int   sock)
 {
-	printf("inside 200 response\n");
-	printf("request: %s\n", request);
 	char* response;
 	char *str;
 	char buf[30];
@@ -332,7 +370,9 @@ void send_html_response(FILE* fp,
 	if (f_size < bytes_to_write) {
 	        bytes_to_write = f_size;
 	}
-	while (count_written < f_size) {
+
+	int count = 0;
+	while (count_written <= f_size) {
 		printf("Count-written before: %ld\n", count_written);
 	  	n = write(sock, str+count_written, bytes_to_write); 
 	  	printf("Second bytes written: %d\n", n);
@@ -340,9 +380,18 @@ void send_html_response(FILE* fp,
 		printf("Count-written after: %ld\n", count_written);
 		if(f_size-count_written < bytes_to_write)
 			bytes_to_write = f_size - count_written;
+
+		if(bytes_to_write == 0) count++;
+		if(count > 1024) break;
 	}	
 }
 
+/******** send_404_response() *****************************
+ function takes two arguements, sock and  request
+ sock is a socket descriptor describing the the port
+ send_404_response sends a http 404 response and writes the 
+ html 404.html to the client. 
+ ********************************************************/
 void send_404_response(int sock)
 {
 	char buf[30];
