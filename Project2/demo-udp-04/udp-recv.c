@@ -47,7 +47,28 @@ main(int argc, char **argv)
 		perror("bind failed");
 		return 0;
 	}
-
+	
+	// first receive should be the file name
+	recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
+	if (recvlen > 0) {
+		buf[recvlen] = 0;
+		// try to open the file of filename buf
+		printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
+		FILE * file_p = fopen(buf, "rb");
+		if (file_p == NULL) {
+			// no file, do nothing
+		} else {
+			fseek(file_p, 0L, SEEK_END);
+			int f_size = ftell(file_p);
+			rewind(file_p);
+			char* str = malloc(f_size+1);
+			size_t read_size = fread(str,1,f_size,file_p);
+			str[read_size] = 0;
+			fclose(file_p);
+				
+		// now send the packets?
+		}
+	}
 	/* now loop, receiving data and printing what we received */
 	for (;;) {
 		printf("waiting on port %d\n", SERVICE_PORT);

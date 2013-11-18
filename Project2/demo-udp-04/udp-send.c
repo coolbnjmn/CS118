@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
+// send the file name over
 	sendto(fd, file_name, strlen(file_name), 0, (struct sockaddr *)&remaddr, slen);
 	
 	/* now let's send the messages */
