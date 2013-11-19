@@ -16,15 +16,17 @@
 #include <sys/socket.h>
 #include "port.h"
 
-#define BUFLEN 2048
+#define BUFLEN 1024
 #define MSGS 5	/* number of messages to send */
 
 int main(int argc, char* argv[])
 {
 	struct sockaddr_in myaddr, remaddr;
-	int fd, i, slen=sizeof(remaddr);
+	int fd, i;
+	socklen_t slen=sizeof(remaddr);
 	char buf[BUFLEN];	/* message buffer */
 	int recvlen;		/* # bytes in acknowledgement message */
+	int msgcnt = 0;
 	
 	if (argc < 4) {
 		printf("Need server address, port num, and filename to send\n");	
@@ -69,24 +71,52 @@ int main(int argc, char* argv[])
 	}
 
 // send the file name over
-	sendto(fd, file_name, strlen(file_name), 0, (struct sockaddr *)&remaddr, slen);
+	if(sendto(fd, file_name, strlen(file_name), 0, (struct sockaddr *)&remaddr, slen) < 0) {
+		perror("sendto");
+		exit(1);
+	}
+	
+	// receive ack for file name packet	
+	recvlen = recvfrom(fd, buf, BUFLEN, 0, (struct sockaddr *)&remaddr, &slen);
+        if (recvlen >= 0) {
+ 	       buf[recvlen] = 0;	/* expect a printable string - terminate it */
+               printf("received message: \"%s\"\n", buf);
+        }
+	recvlen = 0;
+	// now we should receive the file's contents
+	for(;;) {
+		if (recvlen != 0 && recvlen < BUFLEN) break;
+		printf("about to attempt recvfrom\n");
+		recvlen = recvfrom(fd, buf, BUFLEN, 0, (struct sockaddr *)&remaddr, &slen);
+		printf("recvlen: %d\n", recvlen);
+		if (recvlen > 0) {
+ 	       		buf[recvlen] = 0;	/* expect a printable string - terminate it */
+               		printf("received message: \"%s\"\n", buf);
+			// send back ACKs
+			sprintf(buf, "ack %d", msgcnt++);
+			if(sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, slen) < 0) 
+				perror("sendto");
+			
+		}
+		else break;
+	}
 	
 	/* now let's send the messages */
-
+/*
 	for (i=0; i < MSGS; i++) {
 		printf("Sending packet %d to %s port %d\n", i, server, SERVICE_PORT);
 		sprintf(buf, "This is packet %d", i);
-		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, slen)==-1) {
+		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, slen) < 0) {
 			perror("sendto");
 			exit(1);
 		}
-		/* now receive an acknowledgement from the server */
 		recvlen = recvfrom(fd, buf, BUFLEN, 0, (struct sockaddr *)&remaddr, &slen);
                 if (recvlen >= 0) {
-                        buf[recvlen] = 0;	/* expect a printable string - terminate it */
+                        buf[recvlen] = 0;	
                         printf("received message: \"%s\"\n", buf);
                 }
 	}
+*/
 	close(fd);
 	return 0;
 }

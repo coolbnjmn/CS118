@@ -52,11 +52,18 @@ main(int argc, char **argv)
 	recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
 	if (recvlen > 0) {
 		buf[recvlen] = 0;
+		FILE * file_p = fopen(buf, "rb");
 		// try to open the file of filename buf
 		printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
-		FILE * file_p = fopen(buf, "rb");
+		
+		// send back ack for file name reception
+		sprintf(buf, "ack %d", msgcnt++);
+		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
+			perror("sendto");
+
 		if (file_p == NULL) {
 			// no file, do nothing
+			printf("file wasn't opened\n");
 		} else {
 			fseek(file_p, 0L, SEEK_END);
 			int f_size = ftell(file_p);
@@ -65,8 +72,22 @@ main(int argc, char **argv)
 			size_t read_size = fread(str,1,f_size,file_p);
 			str[read_size] = 0;
 			fclose(file_p);
-				
+			long int count_written = 0;
+			int bytes_to_write = 1024;	
+			int n = 0;
 		// now send the packets?
+			while (count_written < f_size) {
+				printf("sending packet\n");
+				n = sendto(fd, str+count_written, bytes_to_write,0, (struct sockaddr *)&remaddr, addrlen);
+				if(n < 0) {
+					perror("sendto");
+				}
+				count_written += n;
+				if(f_size - count_written < bytes_to_write) {
+					bytes_to_write = f_size - count_written;
+				}
+				
+			}
 		}
 	}
 	/* now loop, receiving data and printing what we received */
