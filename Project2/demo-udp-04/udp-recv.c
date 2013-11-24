@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "port.h"
+#include "protocol-header.h"
 
 #define BUFSIZE 2048
 
@@ -38,10 +39,13 @@ main(int argc, char **argv)
 
 	/* bind the socket to any valid IP address and a specific port */
 
+
+	int portno = atoi(argv[1]);
+
 	memset((char *)&myaddr, 0, sizeof(myaddr));
 	myaddr.sin_family = AF_INET;
 	myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	myaddr.sin_port = htons(SERVICE_PORT);
+	myaddr.sin_port = htons(portno);
 
 	if (bind(fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0) {
 		perror("bind failed");
@@ -76,6 +80,9 @@ main(int argc, char **argv)
 			int bytes_to_write = 1024;	
 			int n = 0;
 		// now send the packets?
+			tcpheader *t = malloc(20);
+			t->th_sport = portno;
+			
 			while (count_written < f_size) {
 				printf("sending packet\n");
 				n = sendto(fd, str+count_written, bytes_to_write,0, (struct sockaddr *)&remaddr, addrlen);
