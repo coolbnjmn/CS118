@@ -15,8 +15,11 @@
 #include <arpa/inet.h>
 #include "port.h"
 #include "protocol-header.h"
+#include <signal.h>
 
 #define BUFSIZE 2048
+
+void alarm_catcher (int ignored);
 
 int
 main(int argc, char **argv)
@@ -30,11 +33,12 @@ main(int argc, char **argv)
 	unsigned char buf[BUFSIZE];	/* receive buffer */
 
 
-	if (argc < 2) {
-		printf("Need port num\n");
+	if (argc < 3) {
+		printf("Need port num and window size\n");
 		exit(1);
 	}
 	int portno = atoi(argv[1]);
+	int window_size = atoi(argv[2]);
 	/* create a UDP socket */
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -42,6 +46,12 @@ main(int argc, char **argv)
 		return 0;
 	}
 
+	struct sigaction alarm_handler;
+	alarm_handler.sa_handler = alarm_catcher;
+	alarm_handler.sa_flags = 0;
+	if (sigaction(SIGALRM, &alarm_handler, 0) < 0) {
+		perror("sigaction failed for SIGALRM\n");
+	}
 	/* bind the socket to any valid IP address and a specific port */
 
 
@@ -90,13 +100,14 @@ main(int argc, char **argv)
 			t->th_flags = 0;
 			t->th_sum = 0;
 			t->th_urp = 0;
+			alarm(7);
 			char* to_send = malloc(1024);
 			while (count_written < f_size) {
 				printf("sending packet\n");
 				t->th_seq = msgcnt++;
 				t->th_ack = msgcnt++; // not sure
-				t->th_win = 8; // need to accept user input for this
-				sprintf(to_send, "%d%d", t->th_sport, t->th_dport);
+				t->th_win = window_size; // need to accept user input for this
+				sprintf(to_send, "%d%d%d%d%c%c%c%d%d%d", t->th_sport, t->th_dport, t->th_seq, t->th_ack, t->th_x2, t->th_off, t->th_flags, t->th_win, t->th_sum, t->th_urp);
 				memcpy(to_send+20, str+count_written, 1004);
 				n = sendto(fd, to_send, bytes_to_write,0, (struct sockaddr *)&remaddr, addrlen);
 				if(n < 0) {
@@ -126,4 +137,10 @@ main(int argc, char **argv)
 			perror("sendto");
 	}
 	/* never exits */
+}
+
+
+void alarm_catcher (int ignored) {
+	printf("alarm_cathcer called\n");
+	exit(1);
 }
