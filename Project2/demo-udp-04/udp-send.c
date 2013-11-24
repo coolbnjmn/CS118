@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 		printf("recvlen: %d\n", recvlen);
 		if (recvlen > 0) {
  	       		buf[recvlen] = 0;	/* expect a printable string - terminate it */
-               		printf("received message: \"%s\"\n", buf);
+               		printf("received message: \"%s\"\n", buf+20);
 			// send back ACKs
 			sprintf(buf, "ack %d", msgcnt++);
 			if(sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, slen) < 0) 

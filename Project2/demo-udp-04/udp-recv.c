@@ -30,6 +30,11 @@ main(int argc, char **argv)
 	unsigned char buf[BUFSIZE];	/* receive buffer */
 
 
+	if (argc < 2) {
+		printf("Need port num\n");
+		exit(1);
+	}
+	int portno = atoi(argv[1]);
 	/* create a UDP socket */
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -40,7 +45,6 @@ main(int argc, char **argv)
 	/* bind the socket to any valid IP address and a specific port */
 
 
-	int portno = atoi(argv[1]);
 
 	memset((char *)&myaddr, 0, sizeof(myaddr));
 	myaddr.sin_family = AF_INET;
@@ -81,17 +85,26 @@ main(int argc, char **argv)
 			int n = 0;
 		// now send the packets?
 			tcpheader *t = malloc(20);
-			t->th_sport = portno;
-			
+			t->th_sport = myaddr.sin_port;
+			t->th_dport = remaddr.sin_port;	
+			t->th_flags = 0;
+			t->th_sum = 0;
+			t->th_urp = 0;
+			char* to_send = malloc(1024);
 			while (count_written < f_size) {
 				printf("sending packet\n");
-				n = sendto(fd, str+count_written, bytes_to_write,0, (struct sockaddr *)&remaddr, addrlen);
+				t->th_seq = msgcnt++;
+				t->th_ack = msgcnt++; // not sure
+				t->th_win = 8; // need to accept user input for this
+				sprintf(to_send, "%d%d", t->th_sport, t->th_dport);
+				memcpy(to_send+20, str+count_written, 1004);
+				n = sendto(fd, to_send, bytes_to_write,0, (struct sockaddr *)&remaddr, addrlen);
 				if(n < 0) {
 					perror("sendto");
 				}
-				count_written += n;
+				count_written += (n-20);
 				if(f_size - count_written < bytes_to_write) {
-					bytes_to_write = f_size - count_written;
+					bytes_to_write = f_size - count_written + 20;
 				}
 				
 			}
