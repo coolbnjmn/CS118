@@ -127,25 +127,29 @@ main(int argc, char **argv)
 				}
 				
 			   }
+			   int j = 0;
+			   for(j = 0; j < count; j++){
+			   		printf("waiting on port %d\n", SERVICE_PORT);
+					recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
+					if (recvlen > 0) {
+						buf[recvlen] = 0;
+						printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
+					}
+					else
+						printf("uh oh - something went wrong!\n");
+					int th_sport, th_dport, th_seq, th_ack;
+					sscanf(buf, "%d%d%d%d", &th_sport, &th_dport, &th_seq, &th_ack);
+						
+					printf("th_ack: %d", th_ack);
+					//sprintf(buf, "ack %d", msgcnt++);
+					printf("sending response \"%s\"\n", buf);
+					if (sendto(fd, buf, 20, 0, (struct sockaddr *)&remaddr, addrlen) < 0)
+						perror("sendto");
+			   	}
 			}
-		}
+		}			
 	}
-	/* now loop, receiving data and printing what we received */
-	for (;;) {
-		printf("waiting on port %d\n", SERVICE_PORT);
-		recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&remaddr, &addrlen);
-		if (recvlen > 0) {
-			buf[recvlen] = 0;
-			printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
-		}
-		else
-			printf("uh oh - something went wrong!\n");
-		sprintf(buf, "ack %d", msgcnt++);
-		printf("sending response \"%s\"\n", buf);
-		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
-			perror("sendto");
-	}
-	/* never exits */
+
 }
 
 

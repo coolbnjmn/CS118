@@ -15,6 +15,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include "port.h"
+#include "protocol-header.h"
 
 #define BUFLEN 1024
 #define MSGS 5	/* number of messages to send */
@@ -69,6 +70,14 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "inet_aton() failed\n");
 		exit(1);
 	}
+	
+	tcpheader * t = malloc(20);
+	t->th_sport = myaddr.sin_port;
+	t->th_dport = remaddr.sin_port;
+	t->th_flags = 0;
+        t->th_sum = 0;
+        t->th_urp = 0;
+
 
 // send the file name over
 	if(sendto(fd, file_name, strlen(file_name), 0, (struct sockaddr *)&remaddr, slen) < 0) {
@@ -85,6 +94,7 @@ int main(int argc, char* argv[])
 	recvlen = 0;
 	// now we should receive the file's contents
 	for(;;) {
+	        char* to_send = malloc(20);
 		if (recvlen != 0 && recvlen < BUFLEN) break;
 		printf("about to attempt recvfrom\n");
 		recvlen = recvfrom(fd, buf, BUFLEN, 0, (struct sockaddr *)&remaddr, &slen);
@@ -92,9 +102,13 @@ int main(int argc, char* argv[])
 		if (recvlen > 0) {
  	       		buf[recvlen] = 0;	/* expect a printable string - terminate it */
                		printf("received message: \"%s\"\n", buf+20);
+			
 			// send back ACKs
-			sprintf(buf, "ack %d", msgcnt++);
-			if(sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, slen) < 0) 
+                        t->th_ack = msgcnt;
+			t->th_seq = msgcnt++;
+			sprintf(to_send, "%d%d%d%d%c%c%c%d%d%d", t->th_sport, t->th_dport, t->th_seq, t->th_ack, t->th_x2, t->th_off, t->th_flags, t->th_win, t->th_sum, t->th_urp);
+			printf("See this string: %s msgcnt: %d\n", to_send, msgcnt);
+			if(sendto(fd, to_send, 20, 0, (struct sockaddr *)&remaddr, slen) < 0) 
 				perror("sendto");
 			
 		}
