@@ -20,6 +20,7 @@
 #define BUFSIZE 2048
 
 void alarm_catcher (int ignored);
+int check_to_send(int *window, int window_size);	
 
 int
 main(int argc, char **argv)
@@ -39,6 +40,8 @@ main(int argc, char **argv)
 	}
 	int portno = atoi(argv[1]);
 	int window_size = atoi(argv[2]);
+	int con_win[window_size];
+	bzero(con_win,window_size);
 	/* create a UDP socket */
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -102,10 +105,15 @@ main(int argc, char **argv)
 			t->th_urp = 0;
 			alarm(7);
 			char* to_send = malloc(1024);
+			
 			while (count_written < f_size) {
+			    int count = check_to_send(con_win, window_size);
+		   	    int i = 0;
+			    for(i = 0; i < count; i++) {
 				printf("sending packet\n");
 				t->th_seq = msgcnt++;
-				t->th_ack = msgcnt++; // not sure
+				t->th_ack = msgcnt; // not sure
+				con_win[msgcnt%window_size] = msgcnt;
 				t->th_win = window_size; // need to accept user input for this
 				sprintf(to_send, "%d%d%d%d%c%c%c%d%d%d", t->th_sport, t->th_dport, t->th_seq, t->th_ack, t->th_x2, t->th_off, t->th_flags, t->th_win, t->th_sum, t->th_urp);
 				memcpy(to_send+20, str+count_written, 1004);
@@ -118,6 +126,7 @@ main(int argc, char **argv)
 					bytes_to_write = f_size - count_written + 20;
 				}
 				
+			   }
 			}
 		}
 	}
@@ -140,6 +149,13 @@ main(int argc, char **argv)
 }
 
 
+int check_to_send(int *window, int window_size) {	
+	int i;
+	for(i = 0; i < window_size; i++) {
+		if(window[i] != 0) break;
+	}
+	return i;
+}
 void alarm_catcher (int ignored) {
 	printf("alarm_cathcer called\n");
 	exit(1);
