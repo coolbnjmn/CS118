@@ -72,8 +72,8 @@ int main(int argc, char* argv[])
 	}
 	
 	tcpheader * t = malloc(20);
-	t->th_sport = myaddr.sin_port;
-	t->th_dport = remaddr.sin_port;
+	t->th_sport = ntohs(myaddr.sin_port);
+	t->th_dport = ntohs(remaddr.sin_port);
 	t->th_flags = 0;
         t->th_sum = 0;
         t->th_urp = 0;
@@ -89,12 +89,12 @@ int main(int argc, char* argv[])
 	recvlen = recvfrom(fd, buf, BUFLEN, 0, (struct sockaddr *)&remaddr, &slen);
         if (recvlen >= 0) {
  	       buf[recvlen] = 0;	/* expect a printable string - terminate it */
-               printf("received message: \"%s\"\n", buf);
+               printf("received message length: %d: \"%s\"\n", recvlen, buf);
         }
 	recvlen = 0;
 	// now we should receive the file's contents
 	for(;;) {
-	        char* to_send = malloc(20);
+	        char* to_send = malloc(29);
 		if (recvlen != 0 && recvlen < BUFLEN) break;
 		printf("about to attempt recvfrom\n");
 		recvlen = recvfrom(fd, buf, BUFLEN, 0, (struct sockaddr *)&remaddr, &slen);
@@ -106,8 +106,8 @@ int main(int argc, char* argv[])
 			// send back ACKs
                         t->th_ack = msgcnt;
 			t->th_seq = msgcnt++;
-			sprintf(to_send, "%d%d%d%d%c%c%c%d%d%d", t->th_sport, t->th_dport, t->th_seq, t->th_ack, t->th_x2, t->th_off, t->th_flags, t->th_win, t->th_sum, t->th_urp);
-			printf("See this string: %s msgcnt: %d\n", to_send, msgcnt);
+			sprintf(to_send, "%d %d %d %d %c %c %c %d %d %d", t->th_sport, t->th_dport, t->th_seq, t->th_ack, t->th_x2, t->th_off, t->th_flags, t->th_win, t->th_sum, t->th_urp);
+			printf("See this string: %s msgcnt: %d t->th_ack: %d\n", to_send, msgcnt, t->th_ack);
 			if(sendto(fd, to_send, 20, 0, (struct sockaddr *)&remaddr, slen) < 0) 
 				perror("sendto");
 			

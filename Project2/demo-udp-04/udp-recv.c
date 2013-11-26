@@ -40,6 +40,8 @@ main(int argc, char **argv)
 	}
 	int portno = atoi(argv[1]);
 	int window_size = atoi(argv[2]);
+	//double prob_loss = atof(argv[3]);
+	//double prof_corr = atof(argv[4]);
 	int con_win[window_size];
 	bzero(con_win,window_size);
 	/* create a UDP socket */
@@ -78,7 +80,15 @@ main(int argc, char **argv)
 		printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
 		
 		// send back ack for file name reception
-		sprintf(buf, "ack %d", msgcnt++);
+		tcpheader *ackT = malloc(20);
+		ackT->th_sport = ntohs(myaddr.sin_port);
+		ackT->th_dport = ntohs(remaddr.sin_port);	
+		ackT->th_flags = 0;
+		ackT->th_sum = 0;
+		ackT->th_urp = 0;
+		ackT->th_ack = 0;
+		ackT->th_seq = 0;
+		sprintf(buf, "%d %d %d %d %c %c %c %d %d %d", ackT->th_sport, ackT->th_dport, ackT->th_seq, ackT->th_ack, ackT->th_x2, ackT->th_off, ackT->th_flags, ackT->th_win, ackT->th_sum, ackT->th_urp);
 		if (sendto(fd, buf, strlen(buf), 0, (struct sockaddr *)&remaddr, addrlen) < 0)
 			perror("sendto");
 
@@ -108,14 +118,19 @@ main(int argc, char **argv)
 			
 			while (count_written < f_size) {
 			    int count = check_to_send(con_win, window_size);
+			
 		   	    int i = 0;
 			    for(i = 0; i < count; i++) {
 				printf("sending packet\n");
 				t->th_seq = msgcnt++;
 				t->th_ack = msgcnt; // not sure
-				con_win[msgcnt%window_size] = msgcnt;
+				con_win[(msgcnt-1)%window_size] = msgcnt;
+				int k = 0;
+				for(k = 0; k < window_size; k++) {
+					printf("%d - ",con_win[k]);
+				} printf("\n");
 				t->th_win = window_size; // need to accept user input for this
-				sprintf(to_send, "%d%d%d%d%c%c%c%d%d%d", t->th_sport, t->th_dport, t->th_seq, t->th_ack, t->th_x2, t->th_off, t->th_flags, t->th_win, t->th_sum, t->th_urp);
+				sprintf(to_send, "%d %d %d %d %c %c %c %d %d %d", t->th_sport, t->th_dport, t->th_seq, t->th_ack, t->th_x2, t->th_off, t->th_flags, t->th_win, t->th_sum, t->th_urp);
 				memcpy(to_send+20, str+count_written, 1004);
 				n = sendto(fd, to_send, bytes_to_write,0, (struct sockaddr *)&remaddr, addrlen);
 				if(n < 0) {
@@ -140,11 +155,17 @@ main(int argc, char **argv)
 					int th_sport, th_dport, th_seq, th_ack;
 					sscanf(buf, "%d%d%d%d", &th_sport, &th_dport, &th_seq, &th_ack);
 						
-					printf("th_ack: %d", th_ack);
+					printf("th_ack: %d\n", th_ack);
+					
+					con_win[th_ack%window_size] = 0;
+					int k = 0;
+					for(k = 0; k < window_size; k++) {
+						printf("%d -",con_win[k]);
+					} printf("\n");
 					//sprintf(buf, "ack %d", msgcnt++);
-					printf("sending response \"%s\"\n", buf);
-					if (sendto(fd, buf, 20, 0, (struct sockaddr *)&remaddr, addrlen) < 0)
-						perror("sendto");
+				//	printf("sending response \"%s\"\n", buf);
+				//	if (sendto(fd, buf, 20, 0, (struct sockaddr *)&remaddr, addrlen) < 0)
+				//		perror("sendto");
 			   	}
 			}
 		}			
@@ -155,6 +176,7 @@ main(int argc, char **argv)
 
 int check_to_send(int *window, int window_size) {	
 	int i;
+	printf("check to send being called\n");
 	for(i = 0; i < window_size; i++) {
 		if(window[i] != 0) break;
 	}
