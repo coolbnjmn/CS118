@@ -175,7 +175,7 @@ main (int argc, char *argv[])
 	  if(lossRate > drand48())
 		continue; /* drop packet - for testing/debug purposes */
 	  printf ("---- RECEIVE PACKET %d length %d\n", currPacket.seq_no, currPacket.length);
-	  printf("PACKET CONTENTS: %s", currPacket.data);
+	  printf("PACKET CONTENTS: %s\n", currPacket.data);
 	  /* Send ack and store in buffer */
 	  if (currPacket.seq_no == packet_rcvd + 1)
 	    {
