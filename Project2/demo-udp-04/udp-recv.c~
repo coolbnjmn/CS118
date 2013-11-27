@@ -214,18 +214,17 @@ void *send_packets(void * a)
 		printf("received message: \"%s\" (%d bytes)\n", buf, recvlen);
 	}
 	else
-		printf("uh oh - something went wrong!\n");
-	int th_sport, th_dport, th_seq, th_ack;
-	sscanf(buf, "%d%d%d%d", &th_sport, &th_dport, &th_seq, &th_ack);
+						printf("uh oh - something went wrong!\n");
+					int th_sport, th_dport, th_seq, th_ack;
+					sscanf(buf, "%d%d%d%d", &th_sport, &th_dport, &th_seq, &th_ack);
 						
-	printf("th_ack: %d\n", th_ack);
+					printf("th_ack: %d\n", th_ack);
 					
-	con_win[th_ack%window_size] = 0;
-	k = 0;
-	for(k = 0; k < window_size; k++) {
-		printf("%d -",con_win[k]);
-	} 
-	printf("\n");
+					con_win[th_ack%window_size] = 0;
+					k = 0;
+					for(k = 0; k < window_size; k++) {
+						printf("%d -",con_win[k]);
+					} printf("\n");
 				
 }
 
@@ -237,7 +236,6 @@ int check_to_send(int *window, int window_size) {
 	}
 	return i;
 }
-
 void alarm_catcher (int ignored) {
 	printf("alarm_cathcer called\n");
 	exit(1);

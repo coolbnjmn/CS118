@@ -9,7 +9,7 @@ udp-send: udp-send.o
 	$(CC) -o udp-send udp-send.o $(LIBS)
 
 udp-recv: udp-recv.o 
-	$(CC) -o udp-recv udp-recv.o $(LIBS)
+	$(CC) -o udp-recv udp-recv.o -lpthread $(LIBS)
 
 udp-send.o: udp-send.c port.h
 
