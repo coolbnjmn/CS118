@@ -84,7 +84,6 @@ main (int argc, char *argv[])
 
   // send over file name
   struct gbnpacket currpacket;
-  currpacket.type = htonl (1);
   currpacket.seq_no = htonl (0);
   currpacket.length = htonl (strlen(file_name)); 
   memcpy(currpacket.data, file_name, strlen(file_name));
@@ -117,60 +116,8 @@ main (int argc, char *argv[])
       recvMsgSize = recvfrom (sock, &currPacket, sizeof (currPacket), 0, /* receive GBN packet */
 			      (struct sockaddr *) &gbnClntAddr, &cliAddrLen);
       printf("got here\n");
-      currPacket.type = ntohl (currPacket.type);
       currPacket.length = ntohl (currPacket.length); /* convert from network to host byte order */
       currPacket.seq_no = ntohl (currPacket.seq_no);
-      if (currPacket.type == 4) /* tear-down message */
-	{
-	  printf ("%s\n", buffer);
-	  struct gbnpacket ackmsg;
-	  ackmsg.type = htonl(8);
-	  ackmsg.seq_no = htonl(0);/*convert to network endianness */
-	  ackmsg.length = htonl(0);
-	  if (sendto
-	      (sock, &ackmsg, sizeof (ackmsg), 0,
-	       (struct sockaddr *) &gbnClntAddr,
-	       cliAddrLen) != sizeof (ackmsg))
-	    {
-	      DieWithError ("Error sending tear-down ack"); /* not a big deal-data already rcvd */
-	    }
-	  alarm (7);
-	  while (1)
-	    {
-	      while ((recvfrom (sock, &currPacket, 1024, 0,
-				(struct sockaddr *) &gbnClntAddr,
-				&cliAddrLen))<0)
-		{
-		  if (errno == EINTR)	/* Alarm went off  */
-		    {
-		      /* never reached */
-		      exit(0);
-		    }
-		  else
-		    ;
-		}
-	      if (ntohl(currPacket.type) == 4) /* respond to more teardown messages */
-		{
-		  ackmsg.type = htonl(8);
-		  ackmsg.seq_no = htonl(0);/* convert to network endianness */
-		  ackmsg.length = htonl(0);
-		  if (sendto
-		      (sock, &ackmsg, sizeof (ackmsg), 0, /* send teardown ack */
-		       (struct sockaddr *) &gbnClntAddr,
-		       cliAddrLen) != sizeof (ackmsg))
-		    {
-		      DieWithError ("Error sending tear-down ack");
-		    }
-
-
-		}
-
-
-	    }
-	  DieWithError ("recvfrom() failed");
-	}
-      else
-	{
 	  printf("in else condition\n");
 	  if(lossRate > drand48())
 		continue; /* drop packet - for testing/debug purposes */
@@ -194,7 +141,6 @@ main (int argc, char *argv[])
 		      cliAddrLen) != sizeof (currAck))
 	    DieWithError
 	      ("sendto() sent a different number of bytes than expected");
-	}
     }
   /* NOT REACHED */
 }
