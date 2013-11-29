@@ -97,7 +97,7 @@ main (int argc, char *argv[])
  	printf("got the message\n"); 
 	// open file here
 	char* file_name = file_namepacket.data;
-	printf("File name is: %s\n", file_name);
+	printf("%s\n", file_name);
 	FILE * file_p = fopen(file_name, "rb");
 	if (file_p == NULL) 
 	{
@@ -138,8 +138,8 @@ main (int argc, char *argv[])
  		  printf ("sending packet %d packet_sent %d packet_received %d\n",
                       base+ctr, packet_sent, packet_received);
 
-		  //currpacket.type = htonl (1); /*convert to network endianness */
-		  currpacket.th_seq = htonl (base + ctr);
+		  currpacket.type = htonl (1); /*convert to network endianness */
+		  currpacket.seq_no = htonl (base + ctr);
 		  int currlength;
 		  if ((str_len - ((base + ctr) * chunkSize)) >= chunkSize) /* length chunksize except last packet */
 		    currlength = chunkSize;
@@ -181,9 +181,9 @@ main (int argc, char *argv[])
       /* recvfrom() got something --  cancel the timeout */
       if (respLen)
 	{
-	  //int acktype = ntohl (currAck.type); /* convert to host byte order */
-	  int ackno = ntohl (currAck.th_seq); 
-	  if (ackno > packet_received)
+	  int acktype = ntohl (currAck.type); /* convert to host byte order */
+	  int ackno = ntohl (currAck.seq_no); 
+	  if (ackno > packet_received && acktype == 2)
 	    {
 	      printf ("received ack\n"); /* receive/handle ack */
 	      packet_received++;

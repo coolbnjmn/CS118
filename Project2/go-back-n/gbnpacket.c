@@ -3,8 +3,11 @@
  */
 struct gbnpacket
 {
-  int type;
-  int seq_no;
+  unsigned short int th_sport;
+  unsigned short int th_dport;
+  unsigned int th_seq;
+  unsigned int th_ack;
+//  unsigned short int th_win;
   int length;
-  char data[1012];
+  char data[1006];
 };
