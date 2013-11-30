@@ -25,13 +25,12 @@
 void DieWithError (char *errorMessage);	/* External error handling function */
 void CatchAlarm (int ignored);
 int check_if_corrupt(float);
+int check_if_lost(float);
 
 
 int
 main (int argc, char *argv[])
 {
-  char buffer[8193];		/* buffer with room for null byte */
-  buffer[8192] = '\0';		/* null terminate the buffer */
   int sock;			/* Socket */
   struct sockaddr_in gbnServAddr;	/* Local address */
   struct sockaddr_in gbnClntAddr;	/* Client address */
@@ -40,15 +39,14 @@ main (int argc, char *argv[])
   int recvMsgSize;		/* Size of received message */
   int packet_rcvd = -1;		/* highest packet successfully received */
   struct sigaction myAction;
-  double lossRate;		/* loss rate as a decimal, 50% = input .50 */
+  double lossRate, corruptionRate;		/* loss rate as a decimal, 50% = input .50 */
   char* servIP;
   char* file_name;
 
-  bzero (buffer, 8192);		/* zero out the buffer */
 
-  if (argc < 4 || argc > 5)		/* Test for correct number of parameters */
+  if (argc < 4 || argc > 6)		/* Test for correct number of parameters */
     {
-      fprintf (stderr, "Usage:  %s <UDP SERVER IP> <UDP SERVER PORT> <FILE_NAME> [<LOSS RATE>]\n", argv[0]);
+      fprintf (stderr, "Usage:  %s <UDP SERVER IP> <UDP SERVER PORT> <FILE_NAME> [<LOSS RATE>] [<CORRUPTION RATE>]\n", argv[0]);
       exit (1);
     }
 
@@ -56,12 +54,20 @@ main (int argc, char *argv[])
   servIP = argv[1];
   file_name = argv[3];
 
-  if(argc == 5)
+  srand(time(NULL));
+  if(argc == 6) {
+	corruptionRate = atof(argv[5]);
 	lossRate = atof(argv[4]);	/* loss rate as percentage i.e. 50% = .50 */
-  else
+  }
+  else if(argc == 5) {
+	corruptionRate = 0.0;
+	lossRate = atof(argv[4]);
+  }
+  else {
 	lossRate = 0.0;			/*default to 0% intentional loss rate */
+	corruptionRate = 0.0;
+  }
 
-  //srand48(123456789);/* seed the pseudorandom number generator */
   /* Create socket for sending/receiving datagrams */
   if ((sock = socket (AF_INET, SOCK_DGRAM, 0)) < 0)
     DieWithError ("socket() failed");
@@ -123,11 +129,15 @@ main (int argc, char *argv[])
       currPacket.length = ntohl (currPacket.length); /* convert from network to host byte order */
       currPacket.th_seq = ntohl (currPacket.th_seq);
       printf("in else condition\n");
-      int packet_is_corrupt = check_if_corrupt(lossRate);
-      if(packet_is_corrupt)
+      int packet_is_corrupt = check_if_corrupt(corruptionRate);
+      int packet_is_lost = check_if_lost(lossRate);
+      if(packet_is_lost) {
+	printf("packet was lost\n");
+        continue;
+      }
+      else if(packet_is_corrupt)
       {
 	struct gbnpacket currAck; /* ack packet */
-	//currAck.type = htonl (2); /*convert to network byte order */
 	currAck.th_seq = htonl (packet_rcvd);
 	currAck.length = htonl(0);
 	if (sendto (sock, &currAck, sizeof (currAck), 0, /* send ack */
@@ -135,17 +145,14 @@ main (int argc, char *argv[])
                       cliAddrLen) != sizeof (currAck))
             DieWithError
               ("sendto() sent a different number of bytes than expected");	
+	printf("packet was corrupted\n");
 	continue; /* drop packet - for testing/debug purposes */
       }
       printf ("---- RECEIVE PACKET %d length %d\n", currPacket.th_seq, currPacket.length);
       printf("PACKET CONTENTS: %s\n", currPacket.data);
-      /* Send ack and store in buffer */
-      if (currPacket.th_seq == packet_rcvd + 1)
+      if (currPacket.th_seq >= packet_rcvd + 1)
       {
 	packet_rcvd++;
-	int buff_offset = 1012 * currPacket.th_seq;
-	memcpy (&buffer[buff_offset], currPacket.data, /* copy packet data to buffer */
-		currPacket.length);
       }
       printf ("---- SEND ACK %d\n", packet_rcvd);
       struct gbnpacket currAck; /* ack packet */
@@ -162,15 +169,14 @@ main (int argc, char *argv[])
 }
 
 int
-check_if_corrupt(float lossRate)
+check_if_corrupt(float corruptionRate)
 {
-  srand(time(NULL));
   int is_corrupt = 0;
   float rand_num = rand() % 100; // pseudo-random number
-  float p = 100.0 * lossRate;
+  float p = 100.0 * corruptionRate;
 
-  printf("rand_num is: %f\n", rand_num);
-  printf("p is: %f\n", p);
+//  printf("rand_num is: %f\n", rand_num);
+//  printf("p is: %f\n", p);
 
   int packet_is_corrupted = 0;
   if(rand_num < p)
@@ -178,10 +184,27 @@ check_if_corrupt(float lossRate)
 	is_corrupt = 1;
   }
 
-  printf("Packet is corrupted: %i\n", is_corrupt);
+ // printf("Packet is corrupted: %i\n", is_corrupt);
   return is_corrupt;
 }
 
+int
+check_if_lost(float lossRate) {
+  int is_lost = 0;
+  float rand_num = rand() % 100;
+  float p = 100.0 * lossRate;
+
+  //printf("loss rand_num is: %f\n", rand_num);
+ // printf("loss p is: %f\n", p);
+
+  int packet_is_lost = 0;
+  if(rand_num < p) {
+  	is_lost = 1;
+  }
+ 
+ // printf("Packet is lost: %i\n", is_lost);
+  return is_lost;
+}
 void
 DieWithError (char *errorMessage)
 {

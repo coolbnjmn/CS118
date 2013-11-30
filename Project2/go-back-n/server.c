@@ -21,8 +21,8 @@
 #include <signal.h>		/* for sigaction() */
 #include "gbnpacket.c"
 
-#define TIMEOUT_SECS    3	/* Seconds between retransmits */
-#define MAXTRIES        10	/* Tries before giving up */
+#define TIMEOUT_SECS    1	/* Seconds between retransmits */
+#define MAXTRIES        10000	/* Tries before giving up */
 
 int tries = 0;			/* Count of times sent - GLOBAL for signal-handler access */
 int base = 0;
@@ -138,7 +138,6 @@ main (int argc, char *argv[])
  		  printf ("sending packet %d packet_sent %d packet_received %d\n",
                       base+ctr, packet_sent, packet_received);
 
-		  //currpacket.type = htonl (1); /*convert to network endianness */
 		  currpacket.th_seq = htonl (base + ctr);
 		  int currlength;
 		  if ((str_len - ((base + ctr) * chunkSize)) >= chunkSize) /* length chunksize except last packet */
@@ -169,7 +168,7 @@ main (int argc, char *argv[])
 	  {
 	    if (tries < MAXTRIES)	/* incremented by signal handler */
 	      {
-		printf ("timed out, %d more tries...\n", MAXTRIES - tries);
+		printf ("timed out\n");
 		break;
 	      }
 	    else
