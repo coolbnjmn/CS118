@@ -1,14 +1,3 @@
-/* server.c - go-back-n server implementation in C
- * by Elijah Jordan Montgomery <elijah.montgomery@uky.edu>
- * based on code by Kenneth Calvert
- *
- * This implements a go-back-n server that implements reliable data 
- * transfer over UDP using the go-back-n ARQ with variable chunk size
- *
- * for debug purposes, a loss rate can also be specified
- * compile with "gcc -o server server.c"
- * tested on UKY CS Multilab 
- */
 #include <stdio.h>		/* for printf() and fprintf() */
 #include <sys/socket.h>		/* for socket() and bind() */
 #include <arpa/inet.h>		/* for sockaddr_in and inet_ntoa() */
@@ -19,8 +8,6 @@
 #include <memory.h>
 #include <signal.h>
 #include "gbnpacket.c"		/* defines go-back-n packet structure */
-
-#define ECHOMAX 255		/* Longest string to echo */
 
 void DieWithError (char *errorMessage);	/* External error handling function */
 void CatchAlarm (int ignored);
@@ -150,13 +137,18 @@ main (int argc, char *argv[])
       }
       printf ("---- RECEIVE PACKET %d length %d\n", currPacket.th_seq, currPacket.length);
       printf("PACKET CONTENTS: %s\n", currPacket.data);
+	// write to file for diff command to work
+      FILE *fp;
+      fp = fopen("result.txt", "a");
+      fprintf(fp, "%s", currPacket.data);
+      fclose(fp);
+
       if (currPacket.th_seq >= packet_rcvd + 1)
       {
 	packet_rcvd++;
       }
       printf ("---- SEND ACK %d\n", packet_rcvd);
       struct gbnpacket currAck; /* ack packet */
-      //currAck.type = htonl (2); /*convert to network byte order */
       currAck.th_seq = htonl (packet_rcvd);
       currAck.length = htonl(0);
       if (sendto (sock, &currAck, sizeof (currAck), 0, /* send ack */

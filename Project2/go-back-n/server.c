@@ -1,16 +1,3 @@
-/* client.c - go-back-n client implementation in C
- * by Elijah Jordan Montgomery <elijah.montgomery@uky.edu>
- * based on code by Kenneth Calvert
- *
- * This implements a go-back-n client that implements reliable data
- * transfer over UDP using the go-back-n ARQ with variable chunk size
- *
- * for debug purposes, a loss rate can also be specified in the accompanying
- * server program
- * compile with "gcc -o client client.c"
- * tested on UKY CS Multilab
- */
-
 #include <stdio.h>		/* for printf() and fprintf() */
 #include <sys/socket.h>		/* for socket(), connect(), sendto(), and recvfrom() */
 #include <arpa/inet.h>		/* for sockaddr_in and inet_addr() */
@@ -49,7 +36,7 @@ main (int argc, char *argv[])
   int packet_sent = -1;		/* highest packet sent */
   char* str;
   long int str_len = 0;
-  int chunkSize = 1012;		/* chunk size in bytes */
+  int chunkSize = 1005;		/* chunk size in bytes */
   int nPackets = 0;		/* number of packets to send */
   
   if (argc != 3)		/* Test for correct number of arguments */
@@ -60,7 +47,6 @@ main (int argc, char *argv[])
       exit (1);
     }
 
-  //chunkSize = atoi (argv[3]);	/* Third arg: string to echo */
   gbnServPort = atoi (argv[1]);	/* Use given port */
   windowSize = atoi (argv[2]);
 
@@ -147,11 +133,12 @@ main (int argc, char *argv[])
 		  currpacket.length = htonl (currlength);
 		  memcpy (currpacket.data, /*copy buffer data into packet */
 			  str + ((base + ctr) * chunkSize), currlength);
+		// 18 is the header length of the gbnpacket
 		  if (sendto
-		      (sock, &currpacket, (sizeof (int) * 3) + currlength, 0, /* send packet */
+		      (sock, &currpacket, 18 + currlength, 0, /* send packet */
 		       (struct sockaddr *) &fromAddr,
 		       sizeof (fromAddr)) !=
-		      ((sizeof (int) * 3) + currlength))
+		      (18 + currlength))
 		    DieWithError
 		      ("sendto() sent a different number of bytes than expected");
 		}
