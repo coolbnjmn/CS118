@@ -127,12 +127,14 @@ main (int argc, char *argv[])
 	struct gbnpacket currAck; /* ack packet */
 	currAck.th_seq = htonl (packet_rcvd);
 	currAck.length = htonl(0);
-	if (sendto (sock, &currAck, sizeof (currAck), 0, /* send ack */
+	/*
+	if (sendto (sock, &currAck, sizeof (currAck), 0,
                       (struct sockaddr *) &gbnClntAddr,
                       cliAddrLen) != sizeof (currAck))
             DieWithError
               ("sendto() sent a different number of bytes than expected");	
 	printf("packet was corrupted\n");
+	*/
 	continue; /* drop packet - for testing/debug purposes */
       }
       printf ("---- RECEIVE PACKET %d length %d\n", currPacket.th_seq, currPacket.length);

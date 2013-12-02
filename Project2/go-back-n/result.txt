@@ -1,0 +1,10 @@
+This folder contains examples of Python usage and useful scripts and tools.
+
+You should be aware that these are not Macintosh-specific but are shared
+among Python on all platforms, so there are some that only run on Windows
+or Unix or another platform, and/or make little sense on a Macintosh.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed eu sem eleifend, tincidunt ligula ac, fringilla orci. Duis ornare tortor erat, vel ullamcorper dui bibendum sit amet. Etiam eu sagittis dolor. Donec ornare enim vitae odio imperdiet, sit amet molestie augue sollicitudin. Mauris vitae nisi ut leo pretium imperdiet sit amet sed nisi. Vivamus lobortis libero eu nibh suscipit tincidunt. Fusce eget nisl nisl. Nulla pulvinar ac turpis quis congue. Fusce vehicula id lacus a rutrum. Donec at mi ac velit rutrum cursus.
+
+Maecenas fringilla posuere elit, eget pharetra augue consequat ut. Suspendisse potenti. Vestibulum tempor mi eu libero accumsan tincidunt. Vestibulum vitae vulputate nisi. Aliquam erat volutpat. Pellentesque et condimentum tellus. Curabitur elementum libero nisi, vitae imperdiet orci ultricies non. Donec porta justo sit amet dignissim facilisis. Morbi adipiscing neque sit amet placerat fermentum. Suspendisse a augue vitae ante placerat dictum sed sit amet mauris. Integer porta auctor mauris sit amet fermentum posuere. 
+rta auctor mauris sit amet fermentum posuere. 
+rta auctor mauris sit amet fermentum posuere. 
