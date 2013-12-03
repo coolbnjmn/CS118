@@ -115,7 +115,6 @@ main (int argc, char *argv[])
       printf("got here\n");
       currPacket.length = ntohl (currPacket.length); /* convert from network to host byte order */
       currPacket.th_seq = ntohl (currPacket.th_seq);
-      printf("in else condition\n");
       int packet_is_corrupt = check_if_corrupt(corruptionRate);
       int packet_is_lost = check_if_lost(lossRate);
       if(packet_is_lost) {

@@ -52,34 +52,34 @@ main (int argc, char *argv[])
 
   // nPackets--;
   /* Create a best-effort datagram socket using UDP */
-  if ((sock = socket (AF_INET, SOCK_DGRAM, 0)) < 0)
-    DieWithError ("socket() failed");
+	  if ((sock = socket (AF_INET, SOCK_DGRAM, 0)) < 0)
+	    DieWithError ("socket() failed");
 
-  /* Set signal handler for alarm signal */
-  myAction.sa_handler = CatchAlarm;
-  if (sigfillset (&myAction.sa_mask) < 0)	/* block everything in handler */
-    DieWithError ("sigfillset() failed");
-  myAction.sa_flags = 0;
+	  /* Set signal handler for alarm signal */
+	  myAction.sa_handler = CatchAlarm;
+	  if (sigfillset (&myAction.sa_mask) < 0)	/* block everything in handler */
+	    DieWithError ("sigfillset() failed");
+	  myAction.sa_flags = 0;
 
-  if (sigaction (SIGALRM, &myAction, 0) < 0)
-    DieWithError ("sigaction() failed for SIGALRM");
+	  if (sigaction (SIGALRM, &myAction, 0) < 0)
+	    DieWithError ("sigaction() failed for SIGALRM");
 
-  /* Construct the server address structure */
-  memset (&gbnServAddr, 0, sizeof (gbnServAddr));	/* Zero out structure */
-  gbnServAddr.sin_family = AF_INET;
-//  gbnServAddr.sin_addr.s_addr = inet_addr (servIP);	/* Server IP address */
-  gbnServAddr.sin_addr.s_addr = htonl (INADDR_ANY);
-  gbnServAddr.sin_port = htons (gbnServPort);	/* Server port */
+	  /* Construct the server address structure */
+	  memset (&gbnServAddr, 0, sizeof (gbnServAddr));	/* Zero out structure */
+	  gbnServAddr.sin_family = AF_INET;
+	//  gbnServAddr.sin_addr.s_addr = inet_addr (servIP);	/* Server IP address */
+	  gbnServAddr.sin_addr.s_addr = htonl (INADDR_ANY);
+	  gbnServAddr.sin_port = htons (gbnServPort);	/* Server port */
 
-  if (bind(sock, (struct sockaddr *)&gbnServAddr, sizeof(gbnServAddr)) < 0) {
-  	perror("bind failed:");
-	return 0;
-  }
- 
-  fromSize = sizeof (fromAddr);
-  struct gbnpacket file_namepacket;
+	  if (bind(sock, (struct sockaddr *)&gbnServAddr, sizeof(gbnServAddr)) < 0) {
+		perror("bind failed:");
+		return 0;
+	  }
+	 
+	  fromSize = sizeof (fromAddr);
+	  struct gbnpacket file_namepacket;
 
-  if((respLen = (recvfrom (sock, &file_namepacket, 1024, 0,(struct sockaddr *) &fromAddr, &fromSize))) > 0) {
+	  if((respLen = (recvfrom (sock, &file_namepacket, 1024, 0,(struct sockaddr *) &fromAddr, &fromSize))) > 0) {
  	printf("got the message\n"); 
 	// open file here
 	char* file_name = file_namepacket.data;
@@ -165,10 +165,12 @@ main (int argc, char *argv[])
 	  DieWithError ("recvfrom() failed");
 
       /* recvfrom() got something --  cancel the timeout */
-      if (respLen)
+      if (respLen > 0)
 	{
+	  printf("resplen: %d\n", respLen);
 	  //int acktype = ntohl (currAck.type); /* convert to host byte order */
 	  int ackno = ntohl (currAck.th_seq); 
+	  printf("ackno: %d\n", ackno);
 	  if (ackno > packet_received)
 	    {
 	      printf ("received ack\n"); /* receive/handle ack */
