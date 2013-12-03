@@ -81,7 +81,8 @@ main (int argc, char *argv[])
   // send over file name
   struct gbnpacket currpacket;
   currpacket.th_seq = htonl (0);
-  currpacket.length = htonl (strlen(file_name)); 
+  currpacket.length = htonl (strlen(file_name));
+   
   printf("FILE NAME: %s\n", file_name);
   memcpy(currpacket.data, file_name, strlen(file_name));
   printf("size of gbnpacket: %d\n", sizeof(currpacket));
@@ -95,7 +96,7 @@ main (int argc, char *argv[])
   }
  
   // send the file over
-  if(sendto(sock, &currpacket, 18 + strlen(file_name), 0, (struct sockaddr *) &gbnClntAddr, sizeof(gbnClntAddr)) < 0) {
+  if(sendto(sock, &currpacket, 22 + strlen(file_name), 0, (struct sockaddr *) &gbnClntAddr, sizeof(gbnClntAddr)) < 0) {
       	perror("sendto");
         exit(1);
   }
@@ -115,6 +116,7 @@ main (int argc, char *argv[])
       printf("got here\n");
       currPacket.length = ntohl (currPacket.length); /* convert from network to host byte order */
       currPacket.th_seq = ntohl (currPacket.th_seq);
+      printf("Window size is: %d\n", currPacket.th_cwin);
       int packet_is_corrupt = check_if_corrupt(corruptionRate);
       int packet_is_lost = check_if_lost(lossRate);
       if(packet_is_lost) {

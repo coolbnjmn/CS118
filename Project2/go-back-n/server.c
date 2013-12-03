@@ -36,7 +36,7 @@ main (int argc, char *argv[])
   int packet_sent = -1;		/* highest packet sent */
   char* str;
   long int str_len = 0;
-  int chunkSize = 1005;		/* chunk size in bytes */
+  int chunkSize = 1001;		/* chunk size in bytes */
   int nPackets = 0;		/* number of packets to send */
   
   if (argc != 3)		/* Test for correct number of arguments */
@@ -125,6 +125,7 @@ main (int argc, char *argv[])
                       base+ctr, packet_sent, packet_received);
 
 		  currpacket.th_seq = htonl (base + ctr);
+		  currpacket.th_cwin = windowSize;
 		  int currlength;
 		  if ((str_len - ((base + ctr) * chunkSize)) >= chunkSize) /* length chunksize except last packet */
 		    currlength = chunkSize;
@@ -133,12 +134,12 @@ main (int argc, char *argv[])
 		  currpacket.length = htonl (currlength);
 		  memcpy (currpacket.data, /*copy buffer data into packet */
 			  str + ((base + ctr) * chunkSize), currlength);
-		// 18 is the header length of the gbnpacket
+		// 22 is the header length of the gbnpacket
 		  if (sendto
-		      (sock, &currpacket, 18 + currlength, 0, /* send packet */
+		      (sock, &currpacket, 22 + currlength, 0, /* send packet */
 		       (struct sockaddr *) &fromAddr,
 		       sizeof (fromAddr)) !=
-		      (18 + currlength))
+		      (22 + currlength))
 		    DieWithError
 		      ("sendto() sent a different number of bytes than expected");
 		}

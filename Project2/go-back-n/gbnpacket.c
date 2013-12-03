@@ -7,6 +7,7 @@ struct gbnpacket
   unsigned short int th_dport;
   unsigned int th_seq;
   unsigned int th_ack;
+  unsigned int th_cwin;
   int length;
-  char data[1006];
+  char data[1002];
 };
