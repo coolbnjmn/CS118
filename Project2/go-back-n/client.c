@@ -13,7 +13,7 @@ void DieWithError (char *errorMessage);	/* External error handling function */
 void CatchAlarm (int ignored);
 int check_if_corrupt(float);
 int check_if_lost(float);
-
+void print_to_file(char *);
 
 int
 main (int argc, char *argv[])
@@ -29,7 +29,8 @@ main (int argc, char *argv[])
   double lossRate, corruptionRate;		/* loss rate as a decimal, 50% = input .50 */
   char* servIP;
   char* file_name;
-
+  char** conBuffer;
+  int is_con_init = 0;
 
   if (argc < 4 || argc > 6)		/* Test for correct number of parameters */
     {
@@ -96,7 +97,7 @@ main (int argc, char *argv[])
   }
  
   // send the file over
-  if(sendto(sock, &currpacket, 22 + strlen(file_name), 0, (struct sockaddr *) &gbnClntAddr, sizeof(gbnClntAddr)) < 0) {
+  if(sendto(sock, &currpacket, 26 + strlen(file_name), 0, (struct sockaddr *) &gbnClntAddr, sizeof(gbnClntAddr)) < 0) {
       	perror("sendto");
         exit(1);
   }
@@ -104,6 +105,7 @@ main (int argc, char *argv[])
    printf("sent message\n");
   // receive an ack, then receive the file's contents
 
+  int count = 0;
   for (;;)			/* Run forever */
   {
       /* set the size of the in-out parameter */
@@ -114,6 +116,19 @@ main (int argc, char *argv[])
       recvMsgSize = recvfrom (sock, &currPacket, sizeof (currPacket), 0, /* receive GBN packet */
 			      (struct sockaddr *) &gbnClntAddr, &cliAddrLen);
       printf("got here\n");
+      /* Alloc */
+      if(!is_con_init) {
+  	int win = currPacket.th_cwin;
+
+	conBuffer = (char**)malloc(win*sizeof(char *));
+	int a;
+	for(a = 0; a < win; a++) {
+	   conBuffer[a] = (char*)malloc(997);
+	}
+
+	printf("in is_con_init\n");
+        is_con_init = 1;
+      }
       currPacket.length = ntohl (currPacket.length); /* convert from network to host byte order */
       currPacket.th_seq = ntohl (currPacket.th_seq);
       printf("Window size is: %d\n", currPacket.th_cwin);
@@ -125,9 +140,10 @@ main (int argc, char *argv[])
       }
       else if(packet_is_corrupt)
       {
-	struct gbnpacket currAck; /* ack packet */
-	currAck.th_seq = htonl (packet_rcvd);
-	currAck.length = htonl(0);
+	printf("packet was corrupted\n");
+//	struct gbnpacket currAck; /* ack packet */
+//	currAck.th_seq = htonl (packet_rcvd);
+//	currAck.length = htonl(0);
 	/*
 	if (sendto (sock, &currAck, sizeof (currAck), 0,
                       (struct sockaddr *) &gbnClntAddr,
@@ -141,15 +157,14 @@ main (int argc, char *argv[])
       printf ("---- RECEIVE PACKET %d length %d\n", currPacket.th_seq, currPacket.length);
       printf("PACKET CONTENTS: %s\n", currPacket.data);
 	// write to file for diff command to work
-      FILE *fp;
-      fp = fopen("result.txt", "a");
-      fprintf(fp, "%s", currPacket.data);
-      fclose(fp);
-
-      if (currPacket.th_seq >= packet_rcvd + 1)
+      memcpy(conBuffer[count], currPacket.data, 997);
+      printf("Count is %d\n and Buffer is: %s and conBuffer[1]: %s\n",count, conBuffer[0], conBuffer[1]);
+      if (currPacket.th_seq == packet_rcvd + 1)
       {
 	packet_rcvd++;
       }
+      else
+	continue;
       printf ("---- SEND ACK %d\n", packet_rcvd);
       struct gbnpacket currAck; /* ack packet */
       currAck.th_seq = htonl (packet_rcvd);
@@ -159,8 +174,33 @@ main (int argc, char *argv[])
 		      cliAddrLen) != sizeof (currAck))
 	    DieWithError
 	      ("sendto() sent a different number of bytes than expected");
+      count++;
+      if(count == currPacket.th_cwin || currPacket.th_fin != 0) {
+	int i, maxI;
+	if (currPacket.th_fin != 0) {
+		printf("FGHDJSDDSDJHSDJSDJSKDKDKSDKSDKJDKSJD\n\n"); 
+		maxI = currPacket.th_fin  % currPacket.th_cwin;
+	} else maxI = currPacket.th_cwin;
+	for(i = 0; i < maxI; i++) {
+	   // printf("%s\n", conBuffer[i]);
+      	   print_to_file(conBuffer[i]);
+      	}
+	count = 0;
+        is_con_init = 0;
+
+      }
   }
   /* NOT REACHED */
+}
+
+void
+print_to_file(char *str)
+{
+      printf("Str is %s\n", str);
+      FILE *fp;
+      fp = fopen("result.txt", "a");
+      fprintf(fp, "%s", str);
+      fclose(fp);
 }
 
 int
