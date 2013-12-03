@@ -80,7 +80,6 @@ main (int argc, char *argv[])
 	  struct gbnpacket file_namepacket;
 
 	  if((respLen = (recvfrom (sock, &file_namepacket, 1024, 0,(struct sockaddr *) &fromAddr, &fromSize))) > 0) {
- 	printf("got the message\n"); 
 	// open file here
 	char* file_name = file_namepacket.data;
 	printf("File name is: %s\n", file_name);
@@ -97,7 +96,6 @@ main (int argc, char *argv[])
 		size_t read_size = fread(str,1,str_len,file_p);
 		str[read_size] = 0;
 		fclose(file_p);
-		printf("str_len is: %ld\n", str_len);
   		nPackets = str_len / chunkSize; 
   		if (str_len % chunkSize)
    			nPackets++;			/* if it doesn't divide cleanly, need one more odd-sized packet */
@@ -173,10 +171,7 @@ main (int argc, char *argv[])
       /* recvfrom() got something --  cancel the timeout */
       if (respLen > 0)
 	{
-	  printf("resplen: %d\n", respLen);
-	  //int acktype = ntohl (currAck.type); /* convert to host byte order */
 	  int ackno = ntohl (currAck.th_seq); 
-	  printf("ackno: %d\n", ackno);
 	  if (ackno > packet_received)
 	    {
 	      printf ("received ack\n"); /* receive/handle ack */

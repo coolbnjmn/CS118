@@ -86,7 +86,6 @@ main (int argc, char *argv[])
    
   printf("FILE NAME: %s\n", file_name);
   memcpy(currpacket.data, file_name, strlen(file_name));
-  printf("size of gbnpacket: %d\n", sizeof(currpacket));
 
   memset((char *) &gbnClntAddr, 0, sizeof(gbnClntAddr));
   gbnClntAddr.sin_family = AF_INET;
@@ -102,7 +101,6 @@ main (int argc, char *argv[])
         exit(1);
   }
  
-   printf("sent message\n");
   // receive an ack, then receive the file's contents
 
   int count = 0;
@@ -115,7 +113,6 @@ main (int argc, char *argv[])
       /* Block until receive message from a client */
       recvMsgSize = recvfrom (sock, &currPacket, sizeof (currPacket), 0, /* receive GBN packet */
 			      (struct sockaddr *) &gbnClntAddr, &cliAddrLen);
-      printf("got here\n");
       /* Alloc */
       if(!is_con_init) {
   	int win = currPacket.th_cwin;
@@ -126,7 +123,6 @@ main (int argc, char *argv[])
 	   conBuffer[a] = (char*)malloc(997);
 	}
 
-	printf("in is_con_init\n");
         is_con_init = 1;
       }
       currPacket.length = ntohl (currPacket.length); /* convert from network to host byte order */
@@ -141,24 +137,12 @@ main (int argc, char *argv[])
       else if(packet_is_corrupt)
       {
 	printf("packet was corrupted\n");
-//	struct gbnpacket currAck; /* ack packet */
-//	currAck.th_seq = htonl (packet_rcvd);
-//	currAck.length = htonl(0);
-	/*
-	if (sendto (sock, &currAck, sizeof (currAck), 0,
-                      (struct sockaddr *) &gbnClntAddr,
-                      cliAddrLen) != sizeof (currAck))
-            DieWithError
-              ("sendto() sent a different number of bytes than expected");	
-	printf("packet was corrupted\n");
-	*/
-	continue; /* drop packet - for testing/debug purposes */
+	continue;
       }
       printf ("---- RECEIVE PACKET %d length %d\n", currPacket.th_seq, currPacket.length);
       printf("PACKET CONTENTS: %s\n", currPacket.data);
 	// write to file for diff command to work
       memcpy(conBuffer[count], currPacket.data, 997);
-      printf("Count is %d\n and Buffer is: %s and conBuffer[1]: %s\n",count, conBuffer[0], conBuffer[1]);
       if (currPacket.th_seq == packet_rcvd + 1)
       {
 	packet_rcvd++;
@@ -178,11 +162,9 @@ main (int argc, char *argv[])
       if(count == currPacket.th_cwin || currPacket.th_fin != 0) {
 	int i, maxI;
 	if (currPacket.th_fin != 0) {
-		printf("FGHDJSDDSDJHSDJSDJSKDKDKSDKSDKJDKSJD\n\n"); 
 		maxI = currPacket.th_fin  % currPacket.th_cwin;
 	} else maxI = currPacket.th_cwin;
 	for(i = 0; i < maxI; i++) {
-	   // printf("%s\n", conBuffer[i]);
       	   print_to_file(conBuffer[i]);
       	}
 	count = 0;
@@ -196,7 +178,6 @@ main (int argc, char *argv[])
 void
 print_to_file(char *str)
 {
-      printf("Str is %s\n", str);
       FILE *fp;
       fp = fopen("result.txt", "a");
       fprintf(fp, "%s", str);
@@ -210,16 +191,12 @@ check_if_corrupt(float corruptionRate)
   float rand_num = rand() % 100; // pseudo-random number
   float p = 100.0 * corruptionRate;
 
-//  printf("rand_num is: %f\n", rand_num);
-//  printf("p is: %f\n", p);
-
   int packet_is_corrupted = 0;
   if(rand_num < p)
   {
 	is_corrupt = 1;
   }
 
- // printf("Packet is corrupted: %i\n", is_corrupt);
   return is_corrupt;
 }
 
@@ -229,15 +206,11 @@ check_if_lost(float lossRate) {
   float rand_num = rand() % 100;
   float p = 100.0 * lossRate;
 
-  //printf("loss rand_num is: %f\n", rand_num);
- // printf("loss p is: %f\n", p);
-
   int packet_is_lost = 0;
   if(rand_num < p) {
   	is_lost = 1;
   }
  
- // printf("Packet is lost: %i\n", is_lost);
   return is_lost;
 }
 void
